@@ -1,3 +1,4 @@
+
 import argparse
 from channel_setup import setup_channels
 from adaptive_encoding import analyze_environment, select_encoding, add_decoy_states, generate_random_bases
@@ -8,15 +9,15 @@ from privacy_amplification import privacy_amplification
 from key_verification import verify_key
 from utils.logger import setup_logger
 
-def parse_arguments():
+def parse_arguments(args=None):
     parser = argparse.ArgumentParser(description='Adaptive Quantum Key Distribution System')
     parser.add_argument('--key-length', type=int, default=1024, help='Length of the quantum key')
     parser.add_argument('--decoy-states', action='store_true', help='Use decoy states')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
-    return parser.parse_args()
+    return parser.parse_args(args)
 
-def main():
-    args = parse_arguments()
+def main(args=None):
+    args = parse_arguments(args)
     logger = setup_logger(debug=args.debug)
     
     if logger is None:
