@@ -48,6 +48,21 @@ def calculate_compression_factor(qber):
     else:
         return 0.2
 
+# def create_toeplitz_matrix(input_length, output_length):
+#     """Create a Toeplitz matrix for hashing"""
+#     # Generate random bits for the Toeplitz matrix
+#     # A Toeplitz matrix has constant diagonals
+#     random_bits = np.random.randint(0, 2, input_length + output_length - 1)
+    
+#     toeplitz_matrix = np.zeros((output_length, input_length), dtype=int)
+#     for i in range(output_length):
+#         toeplitz_matrix[i, :] = random_bits[input_length-1-i:2*input_length-1-i]
+    
+#     return toeplitz_matrix
+
+### for the above we have fixed the bug of the mismatched indices in the topelitz matrices generation
+### the correct code is as follows:
+
 def create_toeplitz_matrix(input_length, output_length):
     """Create a Toeplitz matrix for hashing"""
     # Generate random bits for the Toeplitz matrix
@@ -56,7 +71,7 @@ def create_toeplitz_matrix(input_length, output_length):
     
     toeplitz_matrix = np.zeros((output_length, input_length), dtype=int)
     for i in range(output_length):
-        toeplitz_matrix[i, :] = random_bits[input_length-1-i:2*input_length-1-i]
+        toeplitz_matrix[i, :] = random_bits[i:i + input_length]
     
     return toeplitz_matrix
 
