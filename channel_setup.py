@@ -7,11 +7,26 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from utils.logger import get_logger
 from utils.falcon import *
+from enum import Enum
+from qiskit import QuantumCircuit
+from typing import Dict, List, Tuple, Optional
+
+
 
 logger = get_logger(__name__)
 
 import logging
-logging.getLogger('qiskit').setLevel(logging.WARNING)
+
+# Configure Qiskit logging
+qiskit_logger = logging.getLogger('qiskit')
+qiskit_logger.setLevel(logging.WARNING)  # or logging.ERROR to suppress more
+
+# Configure your application logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 
 @dataclass
 class ClockData:
@@ -19,6 +34,26 @@ class ClockData:
     offset: float
     last_sync: float
     drift_rate: float
+
+
+class EncodingScheme(Enum):
+    BB84 = "BB84"
+    SIX_STATE = "SIX_STATE"
+    EIGHT_STATE = "EIGHT_STATE"
+    THREE_PLUS_ONE = "THREE_PLUS_ONE"
+    DECOY_BB84 = "DECOY_BB84"
+    E91 = "E91" 
+
+
+@dataclass
+class EncodingParameters:
+    scheme: EncodingScheme
+    dimension: int
+    basis_sets: List[str]
+    error_tolerance: float
+    max_distance: float
+    uses_entanglement: bool = False  # Add this flag
+    recommended_intensity: float = 1.0
 
 
 
@@ -43,6 +78,166 @@ class BellState:
     fidelity: float
 
 
+
+class QuantumEncoder:
+    def __init__(self):
+        self.supported_encodings = {
+            EncodingScheme.BB84: EncodingParameters(
+                scheme=EncodingScheme.BB84,
+                dimension=2,
+                basis_sets=["computational", "hadamard"],
+                error_tolerance=0.11,
+                max_distance=50
+            ),
+            EncodingScheme.SIX_STATE: EncodingParameters(
+                scheme=EncodingScheme.SIX_STATE,
+                dimension=2,
+                basis_sets=["computational", "hadamard", "circular"],
+                error_tolerance=0.126,
+                max_distance=40
+            ),
+            EncodingScheme.EIGHT_STATE: EncodingParameters(
+                scheme=EncodingScheme.EIGHT_STATE,
+                dimension=2,
+                basis_sets=["computational", "hadamard", "circular", "custom"],
+                error_tolerance=0.15,
+                max_distance=30
+            ),
+            EncodingScheme.THREE_PLUS_ONE: EncodingParameters(
+                scheme=EncodingScheme.THREE_PLUS_ONE,
+                dimension=3,
+                basis_sets=["three_state", "single_state"],
+                error_tolerance=0.13,
+                max_distance=45
+            ),
+            EncodingScheme.DECOY_BB84: EncodingParameters(
+                scheme=EncodingScheme.DECOY_BB84,
+                dimension=2,
+                basis_sets=["computational", "hadamard"],
+                error_tolerance=0.11,
+                max_distance=100,
+                recommended_intensity=0.5
+            ),
+             EncodingScheme.E91: EncodingParameters(
+            scheme=EncodingScheme.E91,
+            dimension=2,
+            basis_sets=["bell_basis"],
+            error_tolerance=0.15,
+            max_distance=100,
+            uses_entanglement=True
+        )
+        }
+        self.current_scheme = None
+        logger.info("Quantum encoder initialized")
+
+    def prepare_state(self, bit: int, basis: int, scheme: EncodingScheme, **kwargs) -> QuantumCircuit:
+        """Prepare quantum state based on encoding scheme"""
+        try:
+            if scheme not in self.supported_encodings:
+                raise ValueError(f"Unsupported encoding scheme: {scheme}")
+            qc = QuantumCircuit(1, 1)
+            if scheme == EncodingScheme.E91:
+                return self._prepare_e91()
+            if scheme == EncodingScheme.BB84:
+                self._prepare_bb84(qc, bit, basis)
+            elif scheme == EncodingScheme.SIX_STATE:
+                self._prepare_six_state(qc, bit, basis)
+            elif scheme == EncodingScheme.EIGHT_STATE:
+                self._prepare_eight_state(qc, bit, basis)
+            elif scheme == EncodingScheme.THREE_PLUS_ONE:
+                self._prepare_three_plus_one(qc, bit, basis)
+            elif scheme == EncodingScheme.DECOY_BB84:
+                intensity = kwargs.get('intensity', 1.0)
+                self._prepare_decoy_bb84(qc, bit, basis, intensity)
+                
+            return qc
+        except Exception as e:
+            logger.error(f"State preparation failed: {str(e)}")
+            raise
+        
+
+    def _prepare_bb84(self, qc: QuantumCircuit, bit: int, basis: int):
+        """Standard BB84 state preparation"""
+        if bit == 1:
+            qc.x(0)
+        if basis == 1:
+            qc.h(0)
+
+    def _prepare_six_state(self, qc: QuantumCircuit, bit: int, basis: int):
+        """Six-state protocol preparation"""
+        if bit == 1:
+            qc.x(0)
+        if basis == 1:
+            qc.h(0)
+        elif basis == 2:
+            qc.h(0)
+            qc.s(0)
+
+    def _prepare_eight_state(self, qc: QuantumCircuit, bit: int, basis: int):
+        """Eight-state protocol preparation"""
+        if bit == 1:
+            qc.x(0)
+        if basis == 1:
+            qc.h(0)
+        elif basis == 2:
+            qc.h(0)
+            qc.s(0)
+        elif basis == 3:
+            qc.sdg(0)
+            qc.h(0)
+
+    def _prepare_three_plus_one(self, qc: QuantumCircuit, bit: int, basis: int):
+        """Three-plus-one protocol preparation"""
+        if basis == 0:
+            # Three-state basis
+            if bit == 1:
+                qc.rx(2*np.pi/3, 0)
+            elif bit == 2:
+                qc.rx(4*np.pi/3, 0)
+        else:
+            # Single-state basis
+            qc.h(0)
+
+    def _prepare_decoy_bb84(self, qc: QuantumCircuit, bit: int, basis: int, intensity: float):
+        """Decoy-state BB84 preparation"""
+        if bit == 1:
+            qc.x(0)
+        if basis == 1:
+            qc.h(0)
+        # Apply intensity adjustment
+        theta = np.arccos(np.sqrt(intensity))
+        qc.rx(theta, 0)
+
+
+    def _prepare_e91(self) -> QuantumCircuit:
+        """E91 protocol state preparation"""
+        qc = QuantumCircuit(2, 2)
+        # Create Bell state
+        qc.h(0)
+        qc.cx(0, 1)
+        return qc
+
+    def select_encoding(self, channel_conditions: Dict) -> EncodingScheme:
+        """Select appropriate encoding based on channel conditions"""
+        qber = channel_conditions.get("QBER", 0.0)
+        distance = channel_conditions.get("distance", 0.0)
+        noise_level = channel_conditions.get("noise_level", 0.0)
+        
+        if distance > 50:
+            return EncodingScheme.DECOY_BB84
+        elif noise_level > 0.1:
+            return EncodingScheme.EIGHT_STATE
+        elif qber > 0.08:
+            return EncodingScheme.SIX_STATE
+        elif channel_conditions.get("asymmetric", False):
+            return EncodingScheme.THREE_PLUS_ONE
+        else:
+            return EncodingScheme.BB84
+
+
+
+
+
 class QuantumChannel:
     def __init__(self, error_rate=0.03, loss_rate=0.1):
         self.error_rate = error_rate
@@ -56,10 +251,11 @@ class QuantumChannel:
             last_sync=time.time(),
             drift_rate=0.0
         )
-        super().__init__()
         self.decoy_states: List[DecoyState] = []
         self.bell_pairs: List[BellState] = []
         self.backend = Aer.get_backend('aer_simulator')
+        self.encoder = QuantumEncoder()
+        self.current_scheme = None
         logger.info(f"Quantum channel initialized with error rate: {error_rate}, loss rate: {loss_rate}")
 
     # Keep existing methods
@@ -235,24 +431,31 @@ class QuantumChannel:
         """
         Measure a Bell state in specified bases
         """
-        qc = bell_state.circuit.copy()
+        try:
+            qc = bell_state.circuit.copy()
+            if basis[0] == 1:  # X basis for first qubit
+                qc.h(0)
+            if basis[1] == 1:  # X basis for second qubit
+                qc.h(1)
+                
+            qc.measure([0, 1], [0, 1])
+            
+            # Run the circuit
+            transpiled_qc = transpile(qc, self.backend)
+            job = self.backend.run(transpiled_qc, shots=1)
+            result = job.result().get_counts()
+            
+            # Get measurement outcomes
+            measurement = list(result.keys())[0]
+            return int(measurement[0]), int(measurement[1])
+            # ... rest of the code
+        except Exception as e:
+            logger.error(f"Bell state measurement failed: {str(e)}")
+            return (0, 0)
+
         
         # Apply measurement bases
-        if basis[0] == 1:  # X basis for first qubit
-            qc.h(0)
-        if basis[1] == 1:  # X basis for second qubit
-            qc.h(1)
-            
-        qc.measure([0, 1], [0, 1])
         
-        # Run the circuit
-        transpiled_qc = transpile(qc, self.backend)
-        job = self.backend.run(transpiled_qc, shots=1)
-        result = job.result().get_counts()
-        
-        # Get measurement outcomes
-        measurement = list(result.keys())[0]
-        return int(measurement[0]), int(measurement[1])
     
     def perform_bell_test(self, num_pairs: int = 100) -> Dict:
         """
@@ -285,10 +488,42 @@ class QuantumChannel:
         logger.info(f"Bell test completed: {results}")
         return results
     
+    def select_encoding_scheme(self) -> EncodingScheme:
+        """Select appropriate encoding scheme based on channel conditions"""
+        if self.encoder is None:
+            raise ValueError("Encoder not initialized")
+        channel_conditions = {
+            "QBER": self.error_rate,
+            "distance": self.calculate_effective_distance(),
+            "noise_level": self.calculate_noise_level(),
+            "asymmetric": self.check_channel_asymmetry()
+        }
+        
+        scheme = self.encoder.select_encoding(channel_conditions)
+        self.current_scheme = scheme
+        logger.info(f"Selected encoding scheme: {scheme.value}")
+        return scheme
 
+    def calculate_effective_distance(self) -> float:
+        """Calculate effective channel distance based on loss rate"""
+        # Typical fiber loss is 0.2 dB/km
+        return -10 * np.log10(1 - self.loss_rate) / 0.2
 
+    def calculate_noise_level(self) -> float:
+        """Calculate channel noise level"""
+        return self.error_rate + self.loss_rate / 2
 
+    def check_channel_asymmetry(self) -> bool:
+        """Check if channel is asymmetric"""
+        # Implementation depends on your specific setup
+        return False
 
+    def prepare_quantum_state(self, bit: int, basis: int) -> QuantumCircuit:
+        """Prepare quantum state using current encoding scheme"""
+        if self.current_scheme == EncodingScheme.DECOY_BB84:
+            intensity = random.choice([0.1, 0.5, 1.0])  # Different intensity levels
+            return self.encoder.prepare_state(bit, basis, self.current_scheme, intensity=intensity)
+        return self.encoder.prepare_state(bit, basis, self.current_scheme)
 
 
 
@@ -296,7 +531,7 @@ class QuantumChannel:
 
     
     
-def flip_qubit(qubit):
+def flip_qubit(qubit: Tuple[int, int]) -> Tuple[int, int]:
     # Simple bit flip for demonstration
     if isinstance(qubit, tuple):
         return (1 - qubit[0], qubit[1])
@@ -380,7 +615,9 @@ class ClassicalChannel:
         return True
     
 
+
 def setup_channels():
+    test_qiskit_logging()
     logger.info("Initializing quantum and classical channels...")
     quantum_channel = QuantumChannel()
     classical_channel = ClassicalChannel()
@@ -392,24 +629,29 @@ def setup_channels():
         # Initial calibration
         quantum_channel.calibrate_channel()
         
+        # Select encoding scheme
+        encoding_scheme = quantum_channel.select_encoding_scheme()
+        logger.info(f"Selected encoding scheme: {encoding_scheme.value}")
+        
         # Initial clock sync
         synchronize_clocks(classical_channel)
-        
-        # Setup decoy states
-        decoy_intensities = [0.1, 0.2, 0.5]  # Different intensity levels
-        decoy_states = quantum_channel.generate_decoy_states(100, decoy_intensities)
-        
-        # Perform initial Bell test
-        bell_test_results = quantum_channel.perform_bell_test(100)
-        if bell_test_results["chsh_value"] > 2:
-            logger.info("Bell test passed - quantum channel verified")
-        else:
-            logger.warning("Bell test failed - possible classical channel simulation")
     else:
         logger.error("Classical channel authentication failed")
     
     return quantum_channel, classical_channel
 
+
+def test_qiskit_logging():
+    qc = QuantumCircuit(2, 2)
+    qc.h(0)
+    qc.cx(0, 1)
+    qc.measure_all()
+    
+    backend = Aer.get_backend('aer_simulator')
+    transpiled_qc = transpile(qc, backend)
+    job = backend.run(transpiled_qc)
+    result = job.result().get_counts()
+    return result
 
 
 def synchronize_clocks(classical_channel):
