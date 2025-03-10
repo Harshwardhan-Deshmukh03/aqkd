@@ -616,31 +616,6 @@ class ClassicalChannel:
     
 
 
-def setup_channels():
-    test_qiskit_logging()
-    logger.info("Initializing quantum and classical channels...")
-    quantum_channel = QuantumChannel()
-    classical_channel = ClassicalChannel()
-    
-    # Authenticate classical channel
-    if classical_channel.authenticate():
-        logger.info("Classical channel authenticated successfully")
-        
-        # Initial calibration
-        quantum_channel.calibrate_channel()
-        
-        # Select encoding scheme
-        encoding_scheme = quantum_channel.select_encoding_scheme()
-        logger.info(f"Selected encoding scheme: {encoding_scheme.value}")
-        
-        # Initial clock sync
-        synchronize_clocks(classical_channel)
-    else:
-        logger.error("Classical channel authentication failed")
-    
-    return quantum_channel, classical_channel
-
-
 def test_qiskit_logging():
     qc = QuantumCircuit(2, 2)
     qc.h(0)
@@ -653,23 +628,126 @@ def test_qiskit_logging():
     result = job.result().get_counts()
     return result
 
+def setup_channels(alice, bob):
+    """
+    Set up quantum and classical channels with participant authentication
+    
+    Args:
+        alice (Participant): Alice participant object
+        bob (Participant): Bob participant object
+        
+    Returns:
+        tuple: (quantum_channel, classical_channel) - The initialized channels
+    """
+    test_qiskit_logging()
+    logger.info("Initializing quantum and classical channels...")
+    quantum_channel = QuantumChannel()
+    classical_channel = ClassicalChannel()
+    
+    # Authenticate participants using RSA keys
+    logger.info(f"Authenticating {alice.get_name()} and {bob.get_name()} using RSA keys...")
+    
+    # Generate authentication messages
+    alice_auth_msg = f"AUTH:{alice.get_name()}:{int(time.time())}"
+    alice_signature = alice.sign_message(alice_auth_msg)
+    
+    bob_auth_msg = f"AUTH:{bob.get_name()}:{int(time.time())}"
+    bob_signature = bob.sign_message(bob_auth_msg)
+    
+    # Verify signatures
+    alice_verified = bob.verify_signature(alice_auth_msg, alice_signature, alice.rsa_key.publickey())
+    bob_verified = alice.verify_signature(bob_auth_msg, bob_signature, bob.rsa_key.publickey())
+    
+    # Update participants' authentication status
+    if alice_verified and bob_verified:
+        alice.authenticate()
+        bob.authenticate()
+        logger.info("Participant authentication successful")
+        
+        # Authenticate classical channel with participants' keys
+        classical_channel.secret_key = SecretKey(1024)  # Use internal SecretKey for compatibility
+        classical_channel.public_key = PublicKey(classical_channel.secret_key)
+        
+        # Store participant public keys for future verification
+        classical_channel.alice_public_key = alice.rsa_key.publickey()
+        classical_channel.bob_public_key = bob.rsa_key.publickey() 
+        
+        # Authenticate classical channel
+        if classical_channel.authenticate():
+            logger.info("Classical channel authenticated successfully")
+            
+            # Initial calibration
+            quantum_channel.calibrate_channel()
+            
+            # Select encoding scheme
+            encoding_scheme = quantum_channel.select_encoding_scheme()
+            logger.info(f"Selected encoding scheme: {encoding_scheme.value}")
+            
+            # Initial clock sync between all parties
+            synchronize_clocks(classical_channel, alice, bob)
+        else:
+            logger.error("Classical channel authentication failed")
+    else:
+        logger.error("Participant authentication failed")
+        if not alice_verified:
+            logger.error(f"Failed to verify {alice.get_name()}'s identity")
+        if not bob_verified:
+            logger.error(f"Failed to verify {bob.get_name()}'s identity")
+    
+    return quantum_channel, classical_channel
 
-def synchronize_clocks(classical_channel):
+
+def synchronize_clocks(classical_channel, alice, bob):
+    """
+    Synchronize clocks between participants and the classical channel
+    
+    Args:
+        classical_channel (ClassicalChannel): The classical communication channel
+        alice (Participant): Alice participant
+        bob (Participant): Bob participant
+        
+    Returns:
+        bool: True if synchronization was successful, False otherwise
+    """
     logger.info("Synchronizing clocks...")
     
-    # Send initial timestamp
-    timestamp = time.time()
-    message = f"SYNC:{timestamp}"
-    signature = classical_channel.sign_message(message)
-    classical_channel.send(message, signature)
-    
-    # Measure and adjust offset
-    offset = classical_channel.measure_time_offset(timestamp)
-    success = classical_channel.adjust_clock(offset)
-    
-    if success:
-        logger.info(f"Clocks synchronized with offset: {offset}")
-    else:
-        logger.error("Clock synchronization failed")
-    
-    return success
+    try:
+        # Get reference timestamp from Alice
+        alice_timestamp = time.time()
+        sync_message = f"SYNC:{alice_timestamp}"
+        
+        # Sign the message with Alice's key
+        alice_signature = alice.sign_message(sync_message)
+        
+        # Send through classical channel
+        classical_channel.send(sync_message, alice_signature)
+        
+        # Bob synchronizes with Alice's timestamp
+        bob.synchronize_clock(alice_timestamp)
+        
+        # Classical channel synchronizes
+        offset = classical_channel.measure_time_offset(alice_timestamp)
+        success = classical_channel.adjust_clock(offset)
+        
+        if success:
+            logger.info(f"Clocks synchronized with offset: {offset}")
+            
+            # Verify clock synchronization by comparing times
+            time_diff_alice_bob = abs(alice.clock_data.local_time - bob.clock_data.local_time)
+            time_diff_alice_channel = abs(alice.clock_data.local_time - classical_channel.clock_data.local_time)
+            
+            logger.info(f"Time difference Alice-Bob: {time_diff_alice_bob} seconds")
+            logger.info(f"Time difference Alice-Channel: {time_diff_alice_channel} seconds")
+            
+            if time_diff_alice_bob < 1.0 and time_diff_alice_channel < 1.0:
+                logger.info("Clock synchronization verification successful")
+            else:
+                logger.warning("Clock synchronization verification showed discrepancies")
+        else:
+            logger.error("Clock synchronization failed")
+        
+        return success
+        
+    except Exception as e:
+        logger.error(f"Clock synchronization error: {str(e)}")
+        return False

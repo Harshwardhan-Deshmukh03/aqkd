@@ -8,6 +8,8 @@ from error_correction import cascade_correction
 from privacy_amplification import privacy_amplification
 from key_verification import verify_key
 from utils.logger import setup_logger
+from participants import create_participants
+
 
 def parse_arguments(args=None):
     parser = argparse.ArgumentParser(description='Adaptive Quantum Key Distribution System')
@@ -26,7 +28,9 @@ def main(args=None):
     logger.info("Starting AQKD protocol...")
     
     # Phase 1: Channel Setup and Authentication
-    quantum_channel, classical_channel = setup_channels()
+    alice, bob = create_participants()
+    
+    quantum_channel, classical_channel = setup_channels(alice,bob)
     
     # Phase 2: Environmental Analysis
     env_data = analyze_environment(quantum_channel)
