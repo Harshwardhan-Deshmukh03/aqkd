@@ -242,7 +242,8 @@ class QuantumEncoder:
 
 
 class QuantumChannel:
-    def __init__(self, error_rate=0.03, loss_rate=0.1):
+    def __init__(self,encoding, error_rate=0.03, loss_rate=0.1):
+        self.encoding= encoding
         self.error_rate = error_rate
         self.loss_rate = loss_rate
         self.received_qubits = []
@@ -626,7 +627,7 @@ def test_qiskit_logging():
     result = job.result().get_counts()
     return result
 
-def setup_channels(alice, bob):
+def setup_channels(alice, bob,supported_encoding):
     """
     Set up quantum and classical channels with participant authentication
     
@@ -639,7 +640,7 @@ def setup_channels(alice, bob):
     """
     test_qiskit_logging()
     logger.info("Initializing quantum and classical channels...")
-    quantum_channel = QuantumChannel()
+    quantum_channel = QuantumChannel(supported_encoding)
     classical_channel = ClassicalChannel()
     
     # Authenticate participants using RSA keys
@@ -743,7 +744,7 @@ def synchronize_clocks(classical_channel, alice, bob):
             
             if time_diff_alice_bob < 1.0 and time_diff_alice_channel < 1.0:
                 logger.info("Clock synchronization verification successful")
-            else:
+            else:            
                 logger.warning("Clock synchronization verification showed discrepancies")
         else:
             logger.error("Clock synchronization failed")

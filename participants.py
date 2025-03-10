@@ -5,7 +5,7 @@ import falcon
 from dataclasses import dataclass
 import time
 from utils.logger import get_logger
-from typing import Optional
+from typing import Optional, List 
 
 logger = get_logger(__name__)
 
@@ -19,6 +19,7 @@ class ClockData:
 @dataclass
 class Participant:
     name: str
+    encoding_supported: List[str]
     secret_key: Optional[falcon.SecretKey] = None
     public_key: Optional[falcon.PublicKey] = None
     authenticated: bool = False
@@ -28,6 +29,7 @@ class Participant:
         last_sync=time.time(),
         drift_rate=0.0
     )
+    
 
     def __post_init__(self):
         self.generate_falcon_keys()
@@ -96,12 +98,15 @@ class Participant:
     def get_name(self) -> str:
         """Return the participant's name"""
         return self.name
+    def get_list(self) -> str:
+        """Return the participant's name"""
+        return self.encoding_supported
 
     def get_key(self) -> str:
         """Return the participant's public key"""
         return str(self.public_key)
 
 def create_participants():
-    alice = Participant(name="Alice")
-    bob = Participant(name="Bob")
+    alice = Participant(name="Alice",encoding_supported=["BB84","SIX_STATE","EIGHT_STATE","DECOY_BB84","E91","THREE_PLUS_ONE"])
+    bob = Participant(name="Bob",encoding_supported=["BB84","SIX_STATE","EIGHT_STATE","DECOY_BB84","E91"])
     return alice, bob

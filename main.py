@@ -18,6 +18,9 @@ def parse_arguments(args=None):
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     return parser.parse_args(args)
 
+def match_encoding_methods(list1, list2):
+    return list(set(list1) & set(list2))
+
 def main(args=None):
     args = parse_arguments(args)
     logger = setup_logger(debug=args.debug)
@@ -29,12 +32,23 @@ def main(args=None):
     
     # Phase 1: Channel Setup and Authentication
     alice, bob = create_participants()
+    print(str(alice.get_list()))
     
-    quantum_channel, classical_channel = setup_channels(alice,bob)
     
+    supported_encoding_methods= match_encoding_methods(alice.encoding_supported,bob.encoding_supported)
+    
+    logger.info(f"Supported encoding methods: {supported_encoding_methods}")
+    quantum_channel, classical_channel = setup_channels(alice,bob,supported_encoding_methods)
+    print(str(quantum_channel.encoding))
+
+    ### 
+
     # Phase 2: Environmental Analysis
+    env_data=analyze_environment(quantum_channel,classical_channel,alice,bob,100)
+    print(str(env_data))
     env_data = analyze_environment(quantum_channel)
     dimension, encoding_basis = select_encoding(env_data)
+    
     
     # Phase 3: Quantum Data Transmission
     alice_bases, qubits = prepare_qubits(args.key_length, dimension, encoding_basis)
