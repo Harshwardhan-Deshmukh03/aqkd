@@ -202,7 +202,7 @@ def get_model_output(env_parameters):
         # Paths to model and scaler
         model_path = 'models/qnn_model.pth'
         scaler_path = 'models/qnn_scaler.pkl'
-        
+        print("models loaded")
         # Initialize model
         model = QNN()
         
@@ -251,27 +251,29 @@ def get_model_output(env_parameters):
 
 
 def select_encoding(env_parameters,supported_encoding_methods):
-    print(env_parameters)
-    model_input = {
-        "QBER": env_parameters["QBER"],
-        "channel_loss": env_parameters["channel_loss"],
-        "noise_levels": env_parameters["noise_levels"],
-        "p_gate": env_parameters["p_gate"]
-    }
+    # print(env_parameters)
+    model_input = [
+    env_parameters["QBER"],
+    env_parameters["channel_loss"],
+    env_parameters["noise_levels"],
+    env_parameters["p_gate"]]
     model_output = get_model_output(model_input)
+
     print(str(model_output))
     available_encodings = supported_encoding_methods
     
-    # Find the intersection between model_output and available_encodings
-    common_encodings = list(set(model_output) & set(available_encodings))
+    # Preserve ordering by iterating through model_output
+    # and selecting the first one that's in available_encodings
+    selected_encoding = None
+    for encoding in model_output:
+        if encoding in available_encodings:
+            selected_encoding = encoding
+            break
     
-    if not common_encodings:
+    if selected_encoding is None:
         # Handle the case when there are no common encodings
         logger.warning("No common encoding schemes found")
         return None, None
-    
-    # Take the first common encoding
-    selected_encoding = common_encodings[0]
     
     # Get encoding parameters for the selected scheme
     encoding_params = supported_encodings[selected_encoding]
