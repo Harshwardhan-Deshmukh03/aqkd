@@ -6,11 +6,14 @@ from typing import Tuple, Optional, Dict, List
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from utils.logger import get_logger
-from utils.falcon import *
+# from utils.falcon import *
 from enum import Enum
 from qiskit import QuantumCircuit
 from typing import Dict, List, Tuple, Optional
 
+import sys
+sys.path.append('./falcon.py/')
+import falcon
 
 
 logger = get_logger(__name__)
@@ -567,8 +570,8 @@ class ClassicalChannel:
         return message_package
     
     def authenticate(self):
-        self.secret_key = SecretKey(1024)
-        self.public_key = PublicKey(self.secret_key)
+        self.secret_key = falcon.SecretKey(128)
+        self.public_key = falcon.PublicKey(self.secret_key)
         self.authenticated = True
         return self.authenticated
     
@@ -649,14 +652,18 @@ def setup_channels(alice, bob):
     
     # Generate authentication messages
     alice_auth_msg = f"AUTH:{alice.get_name()}:{int(time.time())}"
-    alice_signature = alice.sign_message(alice_auth_msg)
+    alice_signature = alice.sign_message(alice_auth_msg, alice.secret_key)
     
     bob_auth_msg = f"AUTH:{bob.get_name()}:{int(time.time())}"
-    bob_signature = bob.sign_message(bob_auth_msg)
+    bob_signature = bob.sign_message(bob_auth_msg, bob.secret_key)
+
+    if alice_signature is None or bob_signature is None:
+        logger.error("Failed to generate valid signatures for authentication")
+        return None, None
     
     # Verify signatures
-    alice_verified = bob.verify_signature(alice_auth_msg, alice_signature, alice.rsa_key.publickey())
-    bob_verified = alice.verify_signature(bob_auth_msg, bob_signature, bob.rsa_key.publickey())
+    alice_verified = bob.verify_signature(alice_auth_msg, alice_signature, alice.public_key)
+    bob_verified = alice.verify_signature(bob_auth_msg, bob_signature, bob.public_key)
     
     # Update participants' authentication status
     if alice_verified and bob_verified:
@@ -665,12 +672,12 @@ def setup_channels(alice, bob):
         logger.info("Participant authentication successful")
         
         # Authenticate classical channel with participants' keys
-        classical_channel.secret_key = SecretKey(1024)  # Use internal SecretKey for compatibility
-        classical_channel.public_key = PublicKey(classical_channel.secret_key)
+        classical_channel.secret_key = falcon.SecretKey(128)  # Use internal SecretKey for compatibility
+        classical_channel.public_key = falcon.PublicKey(classical_channel.secret_key)
         
-        # Store participant public keys for future verification
-        classical_channel.alice_public_key = alice.rsa_key.publickey()
-        classical_channel.bob_public_key = bob.rsa_key.publickey() 
+        # # Store participant public keys for future verification
+        # classical_channel.alice_public_key = alice.rsa_key.publickey()
+        # classical_channel.bob_public_key = bob.rsa_key.publickey() 
         
         # Authenticate classical channel
         if classical_channel.authenticate():

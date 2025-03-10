@@ -1,12 +1,11 @@
+import sys
+sys.path.append('./falcon.py/')
+import falcon
+
 from dataclasses import dataclass
 import time
-from utils.falcon import SecretKey, PublicKey
 from utils.logger import get_logger
-from Crypto.PublicKey import RSA
-from Crypto.Signature import pkcs1_15
-from Crypto.Hash import SHA256
-from typing import Optional  # Import Optional from typing
-
+from typing import Optional
 
 logger = get_logger(__name__)
 
@@ -20,8 +19,8 @@ class ClockData:
 @dataclass
 class Participant:
     name: str
-    rsa_key: RSA.RsaKey = None
-    public_key: Optional[PublicKey] = None
+    secret_key: Optional[falcon.SecretKey] = None
+    public_key: Optional[falcon.PublicKey] = None
     authenticated: bool = False
     clock_data: ClockData = ClockData(
         local_time=time.time(),
@@ -31,27 +30,36 @@ class Participant:
     )
 
     def __post_init__(self):
-        self.generate_rsa_keys()
+        self.generate_falcon_keys()
 
-    def generate_rsa_keys(self):
-        self.rsa_key = RSA.generate(2048)
-        logger.info(f"{self.name} generated RSA keys")
+    def generate_falcon_keys(self):
+        n = 128  # Security parameter for Falcon
+        self.secret_key = falcon.SecretKey(n)
+        self.public_key = falcon.PublicKey(self.secret_key)
+        logger.info(f"{self.name} generated Falcon keys")
 
-    def sign_message(self, message: str) -> bytes:
-        h = SHA256.new(message.encode('utf-8'))
-        signature = pkcs1_15.new(self.rsa_key).sign(h)
-        logger.info(f"{self.name} signed a message")
-        return signature
+    def sign_message(self, message, secret_key, max_retries=100):
+        message_bytes = message.encode('utf-8')  # Convert the message to bytes
+        retry_count = 0
+        error_message = None
+        while True:
+            try:
+                signature = secret_key.sign(message_bytes)
+                print(f"Signature generated successfully after {retry_count} retries.")
+                return signature
+            except ValueError as e:
+                if "Squared norm of signature is too large" in str(e):
+                    retry_count += 1
+                    print(f"Signature norm too large. Retrying ({retry_count}/{max_retries})...")
+                    error_message = str(e)
+                    if retry_count >= max_retries:
+                        return None, error_message
+                else:
+                    raise e
 
-    def verify_signature(self, message: str, signature: bytes, public_key: RSA.RsaKey) -> bool:
-        h = SHA256.new(message.encode('utf-8'))
-        try:
-            pkcs1_15.new(public_key).verify(h, signature)
-            logger.info(f"{self.name} verified a signature successfully")
-            return True
-        except (ValueError, TypeError):
-            logger.error(f"{self.name} failed to verify a signature")
-            return False
+    def verify_signature(self, message, signature, public_key):
+        message_bytes = message.encode('utf-8')  # Convert the message to bytes
+        return public_key.verify(message_bytes, signature)
 
     def authenticate(self):
         self.authenticated = True
@@ -84,13 +92,14 @@ class Participant:
         except Exception as e:
             logger.error(f"{self.name}'s clock adjustment failed: {str(e)}")
             return False
-        
+
     def get_name(self) -> str:
         """Return the participant's name"""
         return self.name
+
     def get_key(self) -> str:
-        """Return the participant's name"""
-        return self.rsa_key
+        """Return the participant's public key"""
+        return str(self.public_key)
 
 def create_participants():
     alice = Participant(name="Alice")
