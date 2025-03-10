@@ -525,11 +525,6 @@ class QuantumChannel:
             return self.encoder.prepare_state(bit, basis, self.current_scheme, intensity=intensity)
         return self.encoder.prepare_state(bit, basis, self.current_scheme)
 
-
-
-
-
-    
     
 def flip_qubit(qubit: Tuple[int, int]) -> Tuple[int, int]:
     # Simple bit flip for demonstration
