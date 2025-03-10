@@ -112,9 +112,155 @@ supported_encodings = {
     }
 }
 
-def select_encoding(ava_encodings):
-    model_output = ['DECOY_BB84', 'E91', 'EIGHT_STATE', 'SIX_STATE', 'BB84']
-    available_encodings = ava_encodings
+
+
+
+
+
+
+
+def get_model_output(env_parameters):
+    """
+    Takes 4 numerical environmental parameters, runs them through the QNN model,
+    and returns the 6 predicted probabilities as a list of encoding methods.
+    
+    Args:
+        env_parameters (list or array): 4 numerical values representing environmental parameters
+        
+    Returns:
+        list: Top encoding methods based on model prediction probabilities
+    """
+    import os
+    import torch
+    import numpy as np
+    import joblib
+    import pennylane as qml
+    import torch.nn as nn
+    import logging
+    
+    # Set up logger
+    logger = logging.getLogger(__name__)
+    
+    # Define the QNN model with 6 classes
+    class QNN(nn.Module):
+        def __init__(self):
+            super(QNN, self).__init__()
+            n_qubits = 4  # One qubit per input feature
+            self.quantum_weights = nn.Parameter(torch.randn(3, n_qubits))
+            self.post_processing = nn.Linear(n_qubits, 6)  # 6 output classes
+            self.softmax = nn.Softmax(dim=1)
+            
+        def forward(self, x):
+            # Quantum circuit definition
+            def quantum_circuit(inputs, weights):
+                dev = qml.device("default.qubit", wires=4)
+                
+                @qml.qnode(dev)
+                def circuit(inputs, weights):
+                    # Encode input features
+                    for i in range(4):
+                        qml.RY(inputs[i], wires=i)
+                    
+                    # Apply parameterized quantum circuit
+                    for i in range(4):
+                        qml.RY(weights[0, i], wires=i)
+                    
+                    # Entangling layer
+                    for i in range(3):
+                        qml.CNOT(wires=[i, i + 1])
+                    qml.CNOT(wires=[3, 0])  # Connect last qubit to first
+                    
+                    # Second layer of rotations
+                    for i in range(4):
+                        qml.RY(weights[1, i], wires=i)
+                    
+                    # Entangling layer
+                    for i in range(3):
+                        qml.CNOT(wires=[i, i + 1])
+                    qml.CNOT(wires=[3, 0])
+                    
+                    # Final rotation layer
+                    for i in range(4):
+                        qml.RY(weights[2, i], wires=i)
+                    
+                    # Return expectation values
+                    return [qml.expval(qml.PauliZ(i)) for i in range(4)]
+                
+                return circuit(inputs, weights)
+            
+            # Apply quantum circuit to each input sample
+            q_out = torch.zeros(x.shape[0], 4)
+            for i, features in enumerate(x):
+                q_out[i] = torch.tensor(quantum_circuit(features, self.quantum_weights))
+            
+            # Post-processing with classical layer
+            out = self.post_processing(q_out)
+            # Apply softmax to get probabilities
+            return self.softmax(out)
+    
+    try:
+        # Paths to model and scaler
+        model_path = 'models/qnn_model.pth'
+        scaler_path = 'models/qnn_scaler.pkl'
+        
+        # Initialize model
+        model = QNN()
+        
+        # Load model weights
+        model.load_state_dict(torch.load(model_path))
+        model.eval()  # Set to evaluation mode
+        
+        # Load scaler
+        scaler = joblib.load(scaler_path)
+        
+        # Convert input to numpy array
+        input_data = np.array(env_parameters).reshape(1, -1)
+        
+        # Scale input data
+        scaled_input = scaler.transform(input_data)
+        input_tensor = torch.tensor(scaled_input, dtype=torch.float32)
+        
+        # Make prediction
+        with torch.no_grad():
+            output = model(input_tensor)
+        
+        # Convert probabilities to numpy
+        probabilities = output.numpy()[0]
+        
+        # Map probabilities to encoding methods
+        # Assuming each index corresponds to a specific encoding method
+        encoding_methods = ["BB84", "DECOY_BB84", "SIX_STATE", "EIGHT_STATE", "E91", "THREE_PLUS_ONE"]
+        
+        # Return the encoding methods sorted by probability (highest first)
+        # This gives priority to the highest probability encodings
+        sorted_indices = np.argsort(probabilities)[::-1]  # Sort in descending order
+        sorted_encodings = [encoding_methods[i] for i in sorted_indices]
+        
+        logger.info(f"Model output probabilities: {probabilities}")
+        logger.info(f"Recommended encodings (in order): {sorted_encodings}")
+        
+        return sorted_encodings
+        
+    except Exception as e:
+        logger.error(f"Error in model prediction: {str(e)}")
+        # Return a default list of encoding methods if model fails
+        return ["BB84", "DECOY_BB84", "SIX_STATE", "EIGHT_STATE", "E91", "THREE_PLUS_ONE"]
+
+
+
+
+
+def select_encoding(env_parameters,supported_encoding_methods):
+    print(env_parameters)
+    model_input = {
+        "QBER": env_parameters["QBER"],
+        "channel_loss": env_parameters["channel_loss"],
+        "noise_levels": env_parameters["noise_levels"],
+        "p_gate": env_parameters["p_gate"]
+    }
+    model_output = get_model_output(model_input)
+    print(str(model_output))
+    available_encodings = supported_encoding_methods
     
     # Find the intersection between model_output and available_encodings
     common_encodings = list(set(model_output) & set(available_encodings))

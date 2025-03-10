@@ -46,10 +46,10 @@ def main(args=None):
     # Phase 2: Environmental Analysis
     env_data=analyze_environment(quantum_channel,classical_channel,alice,bob,100)
     print(str(env_data))
-    env_data = analyze_environment(quantum_channel)
-    dimension, encoding_basis = select_encoding(env_data)
-    
-    
+    dimension, encoding_basis = select_encoding(env_data,supported_encoding_methods)
+
+    print("done ==============================")
+
     # Phase 3: Quantum Data Transmission
     alice_bases, qubits = prepare_qubits(args.key_length, dimension, encoding_basis)
     if args.decoy_states:
