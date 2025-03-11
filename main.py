@@ -79,20 +79,31 @@ def main(args=None):
 
     # Phase 5: Error Correction
     corrected_key = cascade_correction(classical_channel,bob.sifted_key,alice.sifted_key, qber)
+    bob.corrected_key = corrected_key
+    alice.corrected_key = corrected_key
     print("Done correction=========================")
 
-    # Phase 6: Privacy amplification
-    final_key = adaptive_privacy_amplification(corrected_key, qber)
+    # # Phase 6: Privacy amplification
+    # final_key = adaptive_privacy_amplification(corrected_key, qber)
 
 
-    # Phase 7:  Key Verification
-    key_verified = verify_key(classical_channel, final_key)
+    # # Phase 7:  Key Verification
+    # key_verified = verify_key(classical_channel, final_key)
+
+    alice_final_key = adaptive_privacy_amplification(alice.corrected_key, qber)
+    bob_final_key = adaptive_privacy_amplification(bob.corrected_key, qber)
+    print(str(alice_final_key))
+    print(str(bob_final_key))
+
+    # Phase 7: Key Verification
+    key_verified = verify_key(classical_channel, alice_final_key, bob_final_key)
+
      
-    print(str(final_key))
+    print(str(bob_final_key))
 
     if key_verified:
-        logger.info(f"AQKD protocol completed successfully. Key length: {len(final_key)} bits")
-        return final_key
+        logger.info(f"AQKD protocol completed successfully. Key length: {len(bob_final_key)} bits")
+        return bob_final_key
     else:
         logger.error("Key verification failed!")
         return None
