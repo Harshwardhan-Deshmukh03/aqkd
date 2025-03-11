@@ -5,7 +5,7 @@ from adaptive_encoding import analyze_environment, select_encoding, add_decoy_st
 from quantum_transmission import prepare_qubits, transmit_qubits
 from measurement import measure_qubits,reconcile_bases
 from error_correction import cascade_correction
-from privacy_amplification import privacy_amplification
+from privacy_amplification import adaptive_privacy_amplification
 from key_verification import verify_key
 from utils.logger import setup_logger
 from participants import create_participants
@@ -78,10 +78,11 @@ def main(args=None):
     logger.info(f"QBER: {qber:.4f}")
     
     # Phase 6: Error Correction
-    corrected_key = cascade_correction(classical_channel, sifted_key, qber)
-    
+    corrected_key = cascade_correction(classical_channel,bob.sifted_key,alice.sifted_key, qber)
+    print("Done correction=========================")
+
     # Phase 7: Privacy Amplification and Key Verification
-    final_key = privacy_amplification(corrected_key, qber)
+    final_key = adaptive_privacy_amplification(corrected_key, qber)
     key_verified = verify_key(classical_channel, final_key)
      
     print(str(final_key))
