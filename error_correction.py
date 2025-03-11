@@ -91,7 +91,7 @@ logger = get_logger(__name__)
 #     return corrected_key
 
 
-def cascade_correction(classical_channel, bob_key, alice_key=None, qber=None, max_rounds=4):
+def cascade_correction(classical_channel, bob_key, alice_key=None, qber=None, max_rounds=4, error_threshold=0.001):
     """
     Implement the Cascade error correction protocol
     
@@ -107,6 +107,8 @@ def cascade_correction(classical_channel, bob_key, alice_key=None, qber=None, ma
         Estimated Quantum Bit Error Rate
     max_rounds : int, optional
         Maximum number of Cascade rounds to perform
+    error_threshold : float, optional
+        Terminate when estimated error rate falls below this threshold
         
     Returns:
     --------
@@ -155,6 +157,14 @@ def cascade_correction(classical_channel, bob_key, alice_key=None, qber=None, ma
     # Track corrected bit positions to optimize subsequent rounds
     corrected_positions = set()
     
+    # Current estimated error rate
+    current_error_rate = qber
+    
+    # Store permutations and block assignments for each round
+    # FIX 3: Store permutations for cascade effect
+    round_permutations = []
+    round_block_assignments = []
+    
     # Perform multiple rounds of correction
     for round_num in range(max_rounds):
         # Calculate block size for this round (different permutation each round)
@@ -172,11 +182,17 @@ def cascade_correction(classical_channel, bob_key, alice_key=None, qber=None, ma
             permutation = list(range(len(corrected_key)))
             random.shuffle(permutation)
         
+        # FIX 3: Store permutation for this round
+        round_permutations.append(permutation)
+        
         logger.info(f"Cascade round {round_num+1}, block size: {block_size}")
         
         # Divide the permuted key into blocks
         num_blocks = math.ceil(len(corrected_key) / block_size)
         errors_found = 0
+        
+        # FIX 3: Store block assignments for this round
+        block_assignments = [[] for _ in range(num_blocks)]
         
         for block_idx in range(num_blocks):
             start = block_idx * block_size
@@ -185,13 +201,21 @@ def cascade_correction(classical_channel, bob_key, alice_key=None, qber=None, ma
             # Get block indices using the permutation
             block_indices = [permutation[i] for i in range(start, end)]
             
-            # Calculate block parity
-            block_parity = sum(corrected_key[i] for i in block_indices) % 2
+            # FIX 3: Store which indices belong to this block
+            block_assignments[block_idx] = block_indices
+            
+            # FIX 4: Use XOR for parity calculation instead of sum
+            block_parity = 0
+            for i in block_indices:
+                block_parity ^= corrected_key[i]
             
             # Communicate with Alice about this block's parity
             if alice_key is not None:
                 # Simulation mode: calculate Alice's parity directly
-                alice_block_parity = sum(alice_key[i] for i in block_indices) % 2
+                # FIX 4: Use XOR for Alice's parity calculation
+                alice_block_parity = 0
+                for i in block_indices:
+                    alice_block_parity ^= alice_key[i]
             else:
                 # Real mode: send parity to Alice and receive her parity
                 classical_channel.send(f"PARITY_CHECK:ROUND{round_num}:BLOCK{block_idx}:{block_parity}")
@@ -214,20 +238,58 @@ def cascade_correction(classical_channel, bob_key, alice_key=None, qber=None, ma
                     corrected_positions.add(error_index)
                     errors_found += 1
                     
-                    # Cascade: Check other blocks that contain this bit from previous rounds
+                    # FIX 2: Improved cascade with proper block tracking
                     if round_num > 0:
-                        cascade_error_correction(
+                        additional_errors = cascade_error_correction(
                             corrected_key, 
                             error_index, 
                             round_num, 
                             corrected_positions,
+                            round_permutations,
+                            round_block_assignments,
                             classical_channel, 
                             alice_key
                         )
+                        errors_found += additional_errors
+        
+        # FIX 3: Store block assignments for this round
+        round_block_assignments.append(block_assignments)
         
         logger.info(f"Round {round_num+1} complete. Errors found and corrected: {errors_found}")
         
-        # Check if we should terminate early
+        # Estimate the current error rate
+        if alice_key is not None:
+            # In simulation mode, calculate the actual error rate
+            remaining_errors = sum(corrected_key[i] != alice_key[i] for i in range(len(corrected_key)))
+            current_error_rate = remaining_errors / len(corrected_key)
+            logger.info(f"Current estimated error rate: {current_error_rate:.6f}")
+        else:
+            # In real mode, estimate the error rate based on errors found and QBER
+            # This is a simple heuristic - in practice, you would use more sophisticated methods
+            if round_num == 0:
+                # After first round, adjust based on errors found
+                expected_errors = int(qber * len(corrected_key))
+                if errors_found > 0:
+                    # Update error estimate based on first round findings
+                    correction_factor = min(1.0, errors_found / expected_errors)
+                    current_error_rate = qber * correction_factor
+            else:
+                # For later rounds, estimate based on diminishing returns
+                if errors_found > 0:
+                    # If we're still finding errors, estimate remains higher
+                    current_error_rate = max(current_error_rate * 0.5, 0.002)  # Assume at least halving the errors
+                else:
+                    # If no errors found, estimate a lower bound
+                    current_error_rate = max(current_error_rate * 0.25, 0.0005)  # Assume significant reduction
+            
+            logger.info(f"Current estimated error rate: {current_error_rate:.6f}")
+        
+        # Check termination conditions
+        if current_error_rate <= error_threshold:
+            logger.info(f"Error rate below threshold ({error_threshold}), terminating Cascade")
+            break
+            
+        # Check if we should terminate early due to no more errors
         if errors_found == 0 and round_num >= 1:
             logger.info(f"No errors found in round {round_num+1}, terminating Cascade")
             break
@@ -276,15 +338,16 @@ def binary_search_error(key, block_indices, classical_channel, alice_key=None):
         if end - start <= 1:
             # Base case: only two bits left
             first_bit_idx = block_indices[start]
+            second_bit_idx = block_indices[end]
             
             # Check first bit's parity (as a singleton block)
             if alice_key is not None:
                 # Simulation mode
-                bob_parity = key[first_bit_idx] % 2
-                alice_parity = alice_key[first_bit_idx] % 2
+                bob_parity = key[first_bit_idx]
+                alice_parity = alice_key[first_bit_idx]
             else:
                 # Real communication mode
-                bob_parity = key[first_bit_idx] % 2
+                bob_parity = key[first_bit_idx]
                 classical_channel.send(f"PARITY_CHECK:BIT:{first_bit_idx}:{bob_parity}")
                 response = classical_channel.receive()
                 alice_parity = int(response.split(":")[-1])
@@ -292,18 +355,40 @@ def binary_search_error(key, block_indices, classical_channel, alice_key=None):
             if bob_parity != alice_parity:
                 return first_bit_idx
             else:
-                return block_indices[end]
+                # FIX 1: Verify the second bit actually has an error
+                if alice_key is not None:
+                    # Simulation mode
+                    bob_parity = key[second_bit_idx]
+                    alice_parity = alice_key[second_bit_idx]
+                else:
+                    # Real communication mode
+                    bob_parity = key[second_bit_idx]
+                    classical_channel.send(f"PARITY_CHECK:BIT:{second_bit_idx}:{bob_parity}")
+                    response = classical_channel.receive()
+                    alice_parity = int(response.split(":")[-1])
+                
+                if bob_parity != alice_parity:
+                    return second_bit_idx
+                else:
+                    # If we get here, no error was found in either bit
+                    # This shouldn't happen if the block has an odd number of errors
+                    logger.warning("No error found in final two bits, despite parity mismatch")
+                    return None
         
         # Find middle index
         mid = (start + end) // 2
         first_half_indices = block_indices[start:mid+1]
         
-        # Calculate parity of first half
-        first_half_parity = sum(key[idx] for idx in first_half_indices) % 2
+        # FIX 4: Use XOR for parity calculation
+        first_half_parity = 0
+        for idx in first_half_indices:
+            first_half_parity ^= key[idx]
         
         if alice_key is not None:
-            # Simulation mode
-            alice_first_half_parity = sum(alice_key[idx] for idx in first_half_indices) % 2
+            # Simulation mode - FIX 4: Use XOR for Alice's parity
+            alice_first_half_parity = 0
+            for idx in first_half_indices:
+                alice_first_half_parity ^= alice_key[idx]
         else:
             # Real communication mode
             indices_str = ",".join(str(idx) for idx in first_half_indices)
@@ -321,7 +406,8 @@ def binary_search_error(key, block_indices, classical_channel, alice_key=None):
     logger.warning("Binary search did not find an error bit")
     return None
 
-def cascade_error_correction(key, error_index, current_round, corrected_positions, 
+def cascade_error_correction(key, error_index, current_round, corrected_positions,
+                           round_permutations, round_block_assignments,
                            classical_channel, alice_key=None):
     """
     Perform cascade error correction based on a newly discovered error
@@ -336,46 +422,118 @@ def cascade_error_correction(key, error_index, current_round, corrected_position
         Current round number
     corrected_positions : set
         Set of positions that have been corrected
+    round_permutations : list
+        List of permutations used in each round
+    round_block_assignments : list
+        List of block assignments for each round
     classical_channel : object
         Channel for classical communication
     alice_key : list, optional
         Alice's key (for simulation)
+        
+    Returns:
+    --------
+    int
+        Number of additional errors corrected
     """
     import logging
     
     logger = logging.getLogger(__name__)
     logger.debug(f"Cascading error correction from bit {error_index}")
     
-    # In a real implementation, we would need to keep track of all block assignments
-    # from previous rounds. Here we implement a simplified approach.
-    # In practice, we would store all permutations and block assignments.
-    
-    # Placeholder for cascade implementation
-    # Key insight: If a bit flips in the current round, it means that all blocks
-    # containing this bit in previous rounds must now have correct parity
-    
-    # This would be implemented by:
-    # 1. Tracking which bits are in which blocks for all rounds
-    # 2. When a bit is flipped, check all blocks containing it from earlier rounds
-    # 3. If any of those blocks now have incorrect parity, there must be another error
-    # 4. Recursively apply the process to find and fix all correlated errors
-    
-    # Simple demonstration for the idea (not complete implementation):
+    # FIX 2: Implement proper cascade error correction
     errors_corrected = 0
     
-    # In a real implementation, for each previous round:
+    # Check all previous rounds
     for round_idx in range(current_round):
-        # Get the blocks from that round that contained this bit
-        # This would use stored permutation and block information
+        # Find which block in this round contained the error bit
+        permutation = round_permutations[round_idx]
+        block_assignments = round_block_assignments[round_idx]
         
-        # For simulation, we'll just log what would happen
-        logger.debug(f"Would check blocks from round {round_idx+1} containing bit {error_index}")
+        # Find the reverse mapping: in which position of the permutation was this bit?
+        # We need to find i such that permutation[i] == error_index
+        for i, perm_idx in enumerate(permutation):
+            if perm_idx == error_index:
+                permuted_position = i
+                break
+        else:
+            logger.error(f"Could not find error_index {error_index} in permutation for round {round_idx}")
+            continue
         
-        # If the block parity no longer matches Alice's:
-        # 1. Binary search for the new error
-        # 2. Correct it
-        # 3. Add to corrected_positions
-        # 4. Recursively cascade again
+        # Find which block this permuted position belonged to
+        containing_block = None
+        for block_idx, block_indices in enumerate(block_assignments):
+            if permuted_position in block_indices:
+                containing_block = block_idx
+                break
+        
+        if containing_block is None:
+            logger.error(f"Could not find block containing bit {permuted_position} in round {round_idx}")
+            continue
+            
+        # Get all indices in this block
+        block_indices = block_assignments[containing_block]
+        
+        # Calculate block parity after correction
+        # FIX 4: Use XOR for parity calculation
+        block_parity = 0
+        for idx in block_indices:
+            orig_bit_idx = permutation[idx]  # Get the original bit index
+            block_parity ^= key[orig_bit_idx]
+        
+        # Get Alice's parity for this block
+        if alice_key is not None:
+            # Simulation mode
+            alice_block_parity = 0
+            for idx in block_indices:
+                orig_bit_idx = permutation[idx]
+                alice_block_parity ^= alice_key[orig_bit_idx]
+        else:
+            # Real communication mode
+            # We need to tell Alice which block we're checking from which round
+            block_id = f"ROUND{round_idx}:BLOCK{containing_block}"
+            classical_channel.send(f"PARITY_CHECK:{block_id}:{block_parity}")
+            response = classical_channel.receive()
+            alice_block_parity = int(response.split(":")[-1])
+        
+        # If parities still don't match, there's another error in this block
+        if block_parity != alice_block_parity:
+            logger.debug(f"Found parity mismatch in round {round_idx} block {containing_block} after correction")
+            
+            # Map block indices back to original bit indices
+            original_indices = [permutation[idx] for idx in block_indices]
+            
+            # We need to exclude the bit we just corrected
+            original_indices = [idx for idx in original_indices if idx != error_index]
+            
+            if original_indices:
+                # Use binary search to find the new error
+                new_error_index = binary_search_error(
+                    key,
+                    original_indices,
+                    classical_channel,
+                    alice_key
+                )
+                
+                if new_error_index is not None:
+                    # Found another error, correct it
+                    key[new_error_index] = 1 - key[new_error_index]
+                    corrected_positions.add(new_error_index)
+                    errors_corrected += 1
+                    
+                    # Recursively cascade from this new error
+                    additional_errors = cascade_error_correction(
+                        key,
+                        new_error_index,
+                        round_idx + 1,  # Only check rounds before this new error was found
+                        corrected_positions,
+                        round_permutations,
+                        round_block_assignments,
+                        classical_channel,
+                        alice_key
+                    )
+                    
+                    errors_corrected += additional_errors
     
     return errors_corrected
 

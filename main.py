@@ -72,17 +72,20 @@ def main(args=None):
     print(len(bob_bases))
     # print(str(bob_measurements))
     print("Done")
-    
-    # Phase 5: Basis Reconciliation and Key Sifting
     sifted_key, qber = reconcile_bases(classical_channel, alice, bob, bob_measurements,transmitted_qubits)
     logger.info(f"QBER: {qber:.4f}")
     
-    # Phase 6: Error Correction
+
+
+    # Phase 5: Error Correction
     corrected_key = cascade_correction(classical_channel,bob.sifted_key,alice.sifted_key, qber)
     print("Done correction=========================")
 
-    # Phase 7: Privacy Amplification and Key Verification
+    # Phase 6: Privacy amplification
     final_key = adaptive_privacy_amplification(corrected_key, qber)
+
+
+    # Phase 7:  Key Verification
     key_verified = verify_key(classical_channel, final_key)
      
     print(str(final_key))

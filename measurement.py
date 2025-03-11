@@ -284,7 +284,7 @@ def reconcile_bases(classical_channel, alice, bob, bob_measurements, transmitted
             if alice_bases[i] == bob_bases[i]:
                 matching_indices.append(i)
 
-    print("Matching indices: ", matching_indices)
+    # print("Matching indices: ", matching_indices)
     
     # Alice sends matching indices to Bob
     matching_indices_msg = str(matching_indices)
@@ -312,7 +312,8 @@ def reconcile_bases(classical_channel, alice, bob, bob_measurements, transmitted
     # Find mismatched positions
     mismatched_positions = [i for i in range(min_length) if alice_sifted_key[i] != bob_sifted_key[i]]
 
-    print("Mismatched positions: ", mismatched_positions)
+    # print("Mismatched positions: ", mismatched_positions)
+    print("Mismatched positions length: ", len(mismatched_positions))
 
     # Calculate QBER
     qber = len(mismatched_positions) / min_length
