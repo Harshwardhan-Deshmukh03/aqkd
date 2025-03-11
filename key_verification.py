@@ -229,3 +229,25 @@ def calculate_key_hash(key):
     key_str = ''.join(map(str, key))
     hash_result = hashlib.sha256(key_str.encode()).hexdigest()
     return hash_result
+
+
+
+def calculate_key_hash_with_params(key, a, b, prime=2**61 - 1):
+    """Calculate hash of key using specified universal hash parameters"""
+    # Convert bit array to chunks of integers
+    chunks = []
+    for i in range(0, len(key), 32):
+        chunk = key[i:i+32]
+        # Convert bit chunk to integer
+        value = 0
+        for bit in chunk:
+            value = (value << 1) | bit
+        chunks.append(value)
+    
+    # Apply universal hashing
+    result = 0
+    for x in chunks:
+        result = (result + ((a * x + b) % prime)) % prime
+    
+    logger.info(f"Generated hash value: {result} using parameters a={a}, b={b}")
+    return result

@@ -1,11 +1,12 @@
 import numpy as np
 import hashlib
 import random
+import json
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-def adaptive_privacy_amplification(corrected_key, qber, security_parameter=0.1):
+def adaptive_privacy_amplification(corrected_key, qber, security_parameter=0.1, seed=None):
     """
     Perform adaptive privacy amplification using Toeplitz matrix hashing.
     
@@ -16,6 +17,7 @@ def adaptive_privacy_amplification(corrected_key, qber, security_parameter=0.1):
         corrected_key (list): The error-corrected key after reconciliation
         qber (float): The estimated Quantum Bit Error Rate
         security_parameter (float): Additional security parameter to fine-tune compression
+        seed (int, optional): Seed for the random number generator
         
     Returns:
         list: The final secure key after privacy amplification
@@ -39,15 +41,18 @@ def adaptive_privacy_amplification(corrected_key, qber, security_parameter=0.1):
     
     logger.info(f"Adaptive compression factor: {compression_factor:.4f}, Target length: {final_key_length}")
     
-    # Generate a secure seed for the Toeplitz matrix
-    try:
-        seed = generate_secure_seed()
-        logger.info(f"Generated secure seed for Toeplitz matrix generation: {seed}")
-    except Exception as e:
-        logger.error(f"Error generating secure seed: {str(e)}")
-        # Fallback to a simpler seed if there's an error
-        seed = random.randint(0, 2**32 - 1)
-        logger.info(f"Using fallback seed: {seed}")
+    # Use the provided seed or generate a new one
+    if seed is None:
+        try:
+            seed = generate_secure_seed()
+            logger.info(f"Generated secure seed for Toeplitz matrix generation: {seed}")
+        except Exception as e:
+            logger.error(f"Error generating secure seed: {str(e)}")
+            # Fallback to a simpler seed if there's an error
+            seed = random.randint(0, 2**32 - 1)
+            logger.info(f"Using fallback seed: {seed}")
+    else:
+        logger.info(f"Using provided seed for Toeplitz matrix generation: {seed}")
     
     # Create a Toeplitz matrix for hashing with the generated seed
     try:
@@ -237,7 +242,7 @@ def universal_hash_amplification(key, security_level=128):
     
     return binary_hash[:output_length]
 
-def multi_level_privacy_amplification(corrected_key, qber, use_universal_hash=True):
+def multi_level_privacy_amplification(corrected_key, qber, use_universal_hash=True, seed=None):
     """
     Apply multi-level privacy amplification for enhanced security.
     
@@ -248,6 +253,7 @@ def multi_level_privacy_amplification(corrected_key, qber, use_universal_hash=Tr
         corrected_key (list): The error-corrected key
         qber (float): The Quantum Bit Error Rate
         use_universal_hash (bool): Whether to apply universal hashing after Toeplitz
+        seed (int, optional): Seed for the random number generator
         
     Returns:
         list: The final secure key
@@ -256,7 +262,7 @@ def multi_level_privacy_amplification(corrected_key, qber, use_universal_hash=Tr
     
     # First level: Toeplitz matrix hashing
     logger.info("Applying first level: Toeplitz matrix hashing")
-    amplified_key = adaptive_privacy_amplification(corrected_key, qber)
+    amplified_key = adaptive_privacy_amplification(corrected_key, qber, seed=seed)
     
     # Second level (optional): Universal hashing
     if use_universal_hash and len(amplified_key) > 16:
@@ -271,3 +277,38 @@ def multi_level_privacy_amplification(corrected_key, qber, use_universal_hash=Tr
             logger.info(f"Key too short ({len(amplified_key)} bits) for second-level hashing, skipping")
     
     return amplified_key
+
+def share_privacy_amplification_seed(classical_channel):
+    """
+    Generate and share a secure seed for privacy amplification over the classical channel.
+    
+    Args:
+        classical_channel: The authenticated classical channel object
+        
+    Returns:
+        int: The shared seed
+    """
+    # Generate a secure seed
+    seed = generate_secure_seed()
+    logger.info(f"Generated secure seed for privacy amplification: {seed}")
+    
+    # Prepare seed data for transmission
+    seed_data = {
+        "type": "PRIVACY_AMPLIFICATION_SEED",
+        "seed": seed
+    }
+    
+    # Serialize to JSON
+    seed_json = json.dumps(seed_data)
+    
+    # Send over the classical channel
+    try:
+        classical_channel.send(seed_json)
+        logger.info("Privacy amplification seed sent successfully")
+    except Exception as e:
+        logger.error(f"Error sending privacy amplification seed: {str(e)}")
+        # Fall back to a simpler seed in case of error
+        seed = random.randint(0, 2**32 - 1)
+        logger.warning(f"Using fallback seed: {seed}")
+    
+    return seed

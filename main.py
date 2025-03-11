@@ -6,9 +6,10 @@ from quantum_transmission import prepare_qubits, transmit_qubits
 from measurement import measure_qubits,reconcile_bases
 from error_correction import cascade_correction
 from privacy_amplification import adaptive_privacy_amplification
-from key_verification import verify_key
+from key_verification import verify_key, UniversalHashFamily, calculate_key_hash_with_params
 from utils.logger import setup_logger
 from participants import create_participants
+import random,json
 
 
 def parse_arguments(args=None):
@@ -90,12 +91,57 @@ def main(args=None):
     # # Phase 7:  Key Verification
     # key_verified = verify_key(classical_channel, final_key)
 
-    alice_final_key = adaptive_privacy_amplification(alice.corrected_key, qber)
-    bob_final_key = adaptive_privacy_amplification(bob.corrected_key, qber)
+
+    secure_seed = random.randint(0, 2**32 - 1)
+    logger.info(f"Generated secure seed for privacy amplification: {secure_seed}")
+
+    seed_data = {
+        "type": "PRIVACY_AMPLIFICATION_SEED",
+        "seed": secure_seed
+    }
+    classical_channel.send(json.dumps(seed_data))
+
+
+    alice_final_key = adaptive_privacy_amplification(alice.corrected_key, qber, security_parameter=0.1, seed=secure_seed)
+    bob_final_key = adaptive_privacy_amplification(bob.corrected_key, qber, security_parameter=0.1, seed=secure_seed)
+
     print(str(alice_final_key))
     print(str(bob_final_key))
 
     # Phase 7: Key Verification
+
+
+
+# In main.py
+
+# Phase 7: Key Verification
+# Generate the universal hash function parameters
+    uhash = UniversalHashFamily()
+    a, b = uhash.select_function()  # Generate a and b in main
+
+    # Send parameters to Bob via classical channel
+    hash_params = {
+        "type": "HASH_PARAMS",
+        "a": str(a),
+        "b": str(b)
+    }
+    classical_channel.send(json.dumps(hash_params))
+
+    # Calculate Alice's hash
+    alice_hash = calculate_key_hash_with_params(alice_final_key, a, b)
+
+    # Bob would do the same on his side with the received parameters
+    # Simulate receiving Bob's hash
+    bob_hash_msg = classical_channel.receive(json.dumps({
+        "type": "HASH_VALUE",
+        "hash": str(calculate_key_hash_with_params(bob_final_key, a, b))
+    }))
+    bob_hash_data = json.loads(bob_hash_msg)
+    bob_hash = int(bob_hash_data["hash"])
+
+# Compare hashes in main
+    key_verified = (alice_hash == bob_hash)
+    logger.info(f"Key verification: {'Successful' if key_verified else 'Failed'}")
     key_verified = verify_key(classical_channel, alice_final_key, bob_final_key)
 
      
