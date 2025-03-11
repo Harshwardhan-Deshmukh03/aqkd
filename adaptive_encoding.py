@@ -284,7 +284,7 @@ def select_encoding(env_parameters,supported_encoding_methods):
     
     logger.info(f"Selected encoding: {selected_encoding} with dimension {dimension} and basis sets {basis_sets}")
     
-    return dimension, basis_sets
+    return selected_encoding, dimension, basis_sets
 
     # encoder = AdaptiveEncoder()
     # dimension, basis = encoder.select_encoding(env_data)
@@ -294,16 +294,41 @@ def select_encoding(env_parameters,supported_encoding_methods):
 def generate_random_bases(length):
     return [random.choice([0, 1, 2]) for _ in range(length)]
 
-def add_decoy_states(qubits, decoy_ratio=0.1):
+# def add_decoy_states(qubits, decoy_ratio=0.1):
+#     decoy_positions = []
+#     for i in range(len(qubits)):
+#         if random.random() < decoy_ratio:
+#             decoy_positions.append(i)
+#             # Replace with decoy state (using different intensity)
+#             qubits[i] = (qubits[i][0], qubits[i][1], 'decoy')
+    
+#     return qubits, decoy_positions
+def add_decoy_states(quantum_circuits, decoy_ratio=0.1, recommended_intensity=0.5):
     decoy_positions = []
-    for i in range(len(qubits)):
+    
+    for i in range(len(quantum_circuits)):
         if random.random() < decoy_ratio:
             decoy_positions.append(i)
-            # Replace with decoy state (using different intensity)
-            qubits[i] = (qubits[i][0], qubits[i][1], 'decoy')
+            
+            # Get a copy of the circuit
+            qc = quantum_circuits[i]
+            
+            # Add intensity modification to the circuit
+            # In a real system, this would mean using a different laser intensity
+            # In simulation, we can use amplitude damping to represent this
+            
+            # First, apply identity operation to create a barrier/marker
+            qc.id(0)
+            
+            # Then apply an rx gate to modify the amplitude
+            # sqrt(intensity) represents the amplitude reduction
+            qc.rx(2 * np.arcsin(np.sqrt(recommended_intensity)), 0)
+            
+            # Add a custom property to the circuit to mark it as a decoy
+            qc._decoy_state = True
+            qc._intensity = recommended_intensity
     
-    return qubits
-
+    return quantum_circuits, decoy_positions
 
 
 

@@ -3,7 +3,7 @@ import argparse
 from channel_setup import setup_channels
 from adaptive_encoding import analyze_environment, select_encoding, add_decoy_states, generate_random_bases
 from quantum_transmission import prepare_qubits, transmit_qubits
-from measurement import perform_measurements, reconcile_bases
+from measurement import measure_qubits
 from error_correction import cascade_correction
 from privacy_amplification import privacy_amplification
 from key_verification import verify_key
@@ -46,19 +46,32 @@ def main(args=None):
     # Phase 2: Environmental Analysis
     env_data=analyze_environment(quantum_channel,classical_channel,alice,bob,100)
     print(str(env_data))
-    dimension, encoding_basis = select_encoding(env_data,supported_encoding_methods)
+    method, dimension, encoding_basis = select_encoding(env_data,supported_encoding_methods)
 
-    print("done ==============================")
-
+    logger.info(f"Selected encoding method: {method}  {dimension}D {encoding_basis}")
+    
     # Phase 3: Quantum Data Transmission
-    alice_bases, qubits = prepare_qubits(args.key_length, dimension, encoding_basis)
+    alice.bases, qubits = prepare_qubits(args.key_length, method)
+
+    print(len(alice.bases))
+
+    print(len(qubits))
+
     if args.decoy_states:
-        qubits = add_decoy_states(qubits)
-    transmit_qubits(quantum_channel, qubits)
+        qubits, decoy_pos = add_decoy_states(qubits)
+        print(len(decoy_pos))
+
+
+    transmitted_qubits =  transmit_qubits(quantum_channel, qubits, alice, bob)
+
+    # print(str(transmitted_qubits[0]))
     
     # Phase 4: Measurement and Data Acquisition
-    bob_bases = generate_random_bases(args.key_length)
-    measurements = perform_measurements(quantum_channel, bob_bases)
+    # bob_bases = generate_random_bases(args.key_length)
+    bob_bases, measurements = measure_qubits(bob, method, transmitted_qubits)
+    print(len(bob_bases))
+    print(len(measurements))
+    print("Done")
     
     # Phase 5: Basis Reconciliation and Key Sifting
     sifted_key, qber = reconcile_bases(classical_channel, alice_bases, bob_bases, measurements)

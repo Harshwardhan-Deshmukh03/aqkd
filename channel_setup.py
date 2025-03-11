@@ -528,7 +528,80 @@ class QuantumChannel:
             intensity = random.choice([0.1, 0.5, 1.0])  # Different intensity levels
             return self.encoder.prepare_state(bit, basis, self.current_scheme, intensity=intensity)
         return self.encoder.prepare_state(bit, basis, self.current_scheme)
-
+    
+    def send(self, qubits):
+    
+        # Create a copy of qubits to avoid modifying the original
+        received_qubits = qubits.copy()
+        
+        # Import necessary libraries
+        import random
+        import numpy as np
+        from qiskit_aer.noise import NoiseModel, depolarizing_error, amplitude_damping_error
+        import logging
+        
+        # Get logger
+        logger = logging.getLogger()
+        
+        # Define noise parameters (these could be class attributes of QuantumChannel)
+        # Use the parameters from environment analysis or set defaults
+        if hasattr(self, 'p_gate'):
+            p_gate = self.p_gate
+        else:
+            p_gate = 0.02  # 1-qubit gate error probability
+            
+        if hasattr(self, 'p_measurement'):
+            p_meas = self.p_measurement
+        else:
+            p_meas = 0.05  # measurement error probability
+            
+        if hasattr(self, 'gamma'):
+            gamma = self.gamma
+        else:
+            gamma = 0.03  # amplitude damping parameter for channel loss
+        
+        # Apply depolarizing noise (bit and phase flips)
+        for i in range(len(received_qubits)):
+            # Apply depolarizing error with probability p_gate
+            if random.random() < p_gate:
+                # Randomly choose error type (bit flip, phase flip, or both)
+                error_type = random.randint(1, 3)
+                
+                if error_type == 1 or error_type == 3:  # Bit flip (X error)
+                    if isinstance(received_qubits[i], (int, bool)):
+                        received_qubits[i] = 1 - received_qubits[i]  # Flip the bit
+                    elif hasattr(received_qubits[i], 'x'):  # If it's a Qiskit Statevector or similar
+                        received_qubits[i].x(0)  # Apply X gate
+                
+                if error_type == 2 or error_type == 3:  # Phase flip (Z error)
+                    if hasattr(received_qubits[i], 'z'):  # If it's a Qiskit Statevector or similar
+                        received_qubits[i].z(0)  # Apply Z gate
+        
+        # Apply amplitude damping (loss)
+        qubits_after_loss = []
+        for qubit in received_qubits:
+            # Simulate qubit loss with probability gamma
+            if random.random() >= gamma:
+                qubits_after_loss.append(qubit)
+            else:
+                # Log the loss
+                logger.debug("Qubit lost in transmission due to amplitude damping")
+        
+        # If all qubits were lost (unlikely but possible), return an empty list
+        if not qubits_after_loss:
+            logger.warning("All qubits were lost in transmission!")
+            return []
+        
+        # Handle case where some qubits were lost
+        if len(qubits_after_loss) != len(received_qubits):
+            logger.info(f"Channel loss: {(len(received_qubits) - len(qubits_after_loss)) / len(received_qubits):.4f}")
+            return qubits_after_loss
+        
+        # Log the transmission with noise information
+        logger.info(f"Transmitted {len(qubits)} qubits through quantum channel")
+        logger.info(f"Applied noise model: Gate error ({p_gate}), Measurement error ({p_meas}), Amplitude damping ({gamma})")
+        
+        return received_qubits
     
 def flip_qubit(qubit: Tuple[int, int]) -> Tuple[int, int]:
     # Simple bit flip for demonstration
