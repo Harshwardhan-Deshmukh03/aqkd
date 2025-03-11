@@ -1,7 +1,7 @@
-# import random
-# from utils.logger import get_logger
+import random
+from utils.logger import get_logger
 
-# logger = get_logger(__name__)
+logger = get_logger(__name__)
 
 # def perform_measurements(quantum_channel, bob_bases):
 #     """Perform measurements on the received qubits"""
@@ -34,50 +34,6 @@
 #     logger.info(f"Measurements completed: {len(measurements)} qubits measured")
 #     return measurements
 
-# def reconcile_bases(classical_channel, alice_bases, bob_bases, measurements):
-#     """Reconcile bases and perform key sifting"""
-#     logger.info("Performing basis reconciliation and key sifting...")
-    
-#     # Send Bob's bases to Alice
-#     bob_bases_msg = str(bob_bases)
-#     classical_channel.send(bob_bases_msg)
-    
-#     # Alice identifies matching bases
-#     matching_indices = [i for i in range(min(len(alice_bases), len(bob_bases))) 
-#                        if alice_bases[i] == bob_bases[i] and i < len(measurements) and measurements[i] is not None]
-    
-#     # Alice sends matching indices to Bob
-#     matching_indices_msg = str(matching_indices)
-#     classical_channel.send(matching_indices_msg)
-    
-#     # Both extract the sifted key
-#     sifted_key = []
-#     for i in matching_indices:
-#         if i < len(measurements) and measurements[i] is not None:
-#             sifted_key.append(measurements[i])
-    
-#     # Calculate QBER using a portion of the sifted key
-#     qber_check_size = min(100, len(sifted_key) // 10)
-#     if qber_check_size > 0:
-#         qber_check_indices = random.sample(range(len(sifted_key)), qber_check_size)
-#         qber_check_indices.sort()
-        
-#         # Alice sends the bits at these positions
-#         alice_check_bits = [measurements[matching_indices[i]] for i in qber_check_indices]
-#         classical_channel.send(str(alice_check_bits))
-        
-#         # Bob compares with his bits
-#         bob_check_bits = [sifted_key[i] for i in qber_check_indices]
-#         error_count = sum(1 for a, b in zip(alice_check_bits, bob_check_bits) if a != b)
-#         qber = error_count / qber_check_size
-        
-#         # Remove the check bits from the sifted key
-#         sifted_key = [sifted_key[i] for i in range(len(sifted_key)) if i not in qber_check_indices]
-#     else:
-#         qber = 0.0
-    
-#     logger.info(f"Basis reconciliation complete. Sifted key length: {len(sifted_key)}, QBER: {qber:.4f}")
-#     return sifted_key, qber
 
 # def adaptive_measurement(bob_bases, env_data):
 #     """Adapt Bob's measurement settings based on channel conditions"""
@@ -239,3 +195,173 @@ def measure_in_basis(qubit, basis_name, method):
     
     
     return measured_bit
+
+
+
+
+
+
+# def reconcile_bases(classical_channel, alice, bob, bob_measurements,transmitted_qubits):
+#     """Reconcile bases and perform key sifting"""
+#     logger.info("Performing basis reconciliation and key sifting...")
+    
+#     # Send Bob's bases to Alice
+#     bob_bases_msg = str(bob_bases)
+#     classical_channel.send(bob_bases_msg)
+    
+#     # Alice identifies matching bases
+#     matching_indices = [i for i in range(min(len(alice_bases), len(bob_bases))) 
+#                        if alice_bases[i] == bob_bases[i] and i < len(measurements) and measurements[i] is not None]
+    
+#     # Alice sends matching indices to Bob
+#     matching_indices_msg = str(matching_indices)
+#     classical_channel.send(matching_indices_msg)
+    
+#     # Both extract the sifted key
+#     sifted_key = []
+#     for i in matching_indices:
+#         if i < len(measurements) and measurements[i] is not None:
+#             sifted_key.append(measurements[i])
+    
+#     # Calculate QBER using a portion of the sifted key
+#     qber_check_size = min(100, len(sifted_key) // 10)
+#     if qber_check_size > 0:
+#         qber_check_indices = random.sample(range(len(sifted_key)), qber_check_size)
+#         qber_check_indices.sort()
+        
+#         # Alice sends the bits at these positions
+#         alice_check_bits = [measurements[matching_indices[i]] for i in qber_check_indices]
+#         classical_channel.send(str(alice_check_bits))
+        
+#         # Bob compares with his bits
+#         bob_check_bits = [sifted_key[i] for i in qber_check_indices]
+#         error_count = sum(1 for a, b in zip(alice_check_bits, bob_check_bits) if a != b)
+#         qber = error_count / qber_check_size
+        
+#         # Remove the check bits from the sifted key
+#         sifted_key = [sifted_key[i] for i in range(len(sifted_key)) if i not in qber_check_indices]
+#     else:
+#         qber = 0.0
+    
+#     logger.info(f"Basis reconciliation complete. Sifted key length: {len(sifted_key)}, QBER: {qber:.4f}")
+#     return sifted_key, qber
+
+
+
+
+def reconcile_bases(classical_channel, alice, bob, bob_measurements, transmitted_qubits):
+    """
+    Reconcile bases between Alice and Bob and perform key sifting.
+    
+    Args:
+        classical_channel: The classical communication channel
+        alice: Alice participant object
+        bob: Bob participant object
+        bob_measurements: Measurement results from Bob
+        transmitted_qubits: Qubits that were transmitted
+        
+    Returns:
+        tuple: (sifted_key, qber) - The sifted key and quantum bit error rate
+    """
+    import random
+    import logging
+    logger = logging.getLogger()
+    
+    logger.info("Performing basis reconciliation and key sifting...")
+    
+    # Get Alice and Bob's bases
+    alice_bases = alice.bases
+    bob_bases = bob.bases
+    
+    # Send Bob's bases to Alice via classical channel
+    bob_bases_msg = str(bob_bases)
+    classical_channel.send(bob_bases_msg)
+    
+    # Alice identifies matching bases
+    matching_indices = []
+    for i in range(min(len(alice_bases), len(bob_bases))):
+        if i < len(bob_measurements) and bob_measurements[i] is not None:
+            if alice_bases[i] == bob_bases[i]:
+                matching_indices.append(i)
+
+    print("Matching indices: ", matching_indices)
+    
+    # Alice sends matching indices to Bob
+    matching_indices_msg = str(matching_indices)
+    classical_channel.send(matching_indices_msg)
+    
+    # Both extract the sifted key
+    bob_sifted_key = []
+    alice_sifted_key = []
+
+    for i in matching_indices:
+        if i < len(bob_measurements) and bob_measurements[i] is not None:
+            bob_sifted_key.append(bob_measurements[i])
+
+    for i in matching_indices:
+        if i < len(alice.bits):
+            alice_sifted_key.append(alice.bits[i])
+
+    # print("Bob sifted key: ", bob_sifted_key)
+    # print("Alice sifted key: ", alice_sifted_key)
+    
+    min_length = min(len(alice_sifted_key), len(bob_sifted_key))
+    alice_sifted_key = alice_sifted_key[:min_length]
+    bob_sifted_key = bob_sifted_key[:min_length]
+
+    # Find mismatched positions
+    mismatched_positions = [i for i in range(min_length) if alice_sifted_key[i] != bob_sifted_key[i]]
+
+    print("Mismatched positions: ", mismatched_positions)
+
+    # Calculate QBER
+    qber = len(mismatched_positions) / min_length
+
+    # Calculate QBER using a portion of the sifted key
+    # qber_check_size = min(100, len(sifted_key) // 10)
+    # if qber_check_size > 0:
+    #     qber_check_indices = random.sample(range(len(sifted_key)), qber_check_size)
+    #     qber_check_indices.sort()
+        
+    #     # Alice gets the bits she originally sent at these positions
+    #     alice_check_bits = []
+    #     for i in qber_check_indices:
+    #         original_index = matching_indices[i]
+    #         if original_index < len(transmitted_qubits):
+    #             # Get the original bit value from Alice's transmitted qubits
+    #             # This might need adjustment based on how the original bit values are stored
+    #             if hasattr(alice, 'sent_qubits') and alice.sent_qubits is not None:
+    #                 alice_check_bits.append(alice.sent_qubits[original_index])
+        
+    #     classical_channel.send(str(alice_check_bits))
+        
+    #     # Bob compares with his bits
+    #     bob_check_bits = [sifted_key[i] for i in qber_check_indices if i < len(sifted_key)]
+        
+    #     # Ensure we have matching lengths before comparing
+    #     min_length = min(len(alice_check_bits), len(bob_check_bits))
+    #     alice_check_bits = alice_check_bits[:min_length]
+    #     bob_check_bits = bob_check_bits[:min_length]
+        
+    #     if min_length > 0:
+    #         error_count = sum(1 for a, b in zip(alice_check_bits, bob_check_bits) if a != b)
+    #         qber = error_count / min_length
+    #     else:
+    #         qber = 0.0
+        
+    #     # Remove the check bits from the sifted key
+    #     new_sifted_key = []
+    #     for i in range(len(sifted_key)):
+    #         if i not in qber_check_indices:
+    #             new_sifted_key.append(sifted_key[i])
+    #     sifted_key = new_sifted_key
+    # else:
+    #     qber = 0.0
+    
+    # logger.info(f"Basis reconciliation complete. Sifted key length: {len(sifted_key)}, QBER: {qber:.4f}")
+    
+    # Store the sifted key in both Alice and Bob objects
+    alice.sifted_key = alice_sifted_key
+    bob.sifted_key = bob_sifted_key
+    
+    return alice_sifted_key, qber

@@ -21,6 +21,8 @@ class Participant:
     name: str
     encoding_supported: List[str]
     bases: List[str] = None
+    bits: List[str] = None
+
     sent_qubits: List[str] = None
     received_qubits: List[str] = None
     secret_key: Optional[falcon.SecretKey] = None

@@ -558,7 +558,7 @@ class QuantumChannel:
         if hasattr(self, 'gamma'):
             gamma = self.gamma
         else:
-            gamma = 0.03  # amplitude damping parameter for channel loss
+            gamma = 0.0  # amplitude damping parameter for channel loss
         
         # Apply depolarizing noise (bit and phase flips)
         for i in range(len(received_qubits)):

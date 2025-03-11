@@ -3,7 +3,7 @@ import argparse
 from channel_setup import setup_channels
 from adaptive_encoding import analyze_environment, select_encoding, add_decoy_states, generate_random_bases
 from quantum_transmission import prepare_qubits, transmit_qubits
-from measurement import measure_qubits
+from measurement import measure_qubits,reconcile_bases
 from error_correction import cascade_correction
 from privacy_amplification import privacy_amplification
 from key_verification import verify_key
@@ -44,14 +44,14 @@ def main(args=None):
     ### 
 
     # Phase 2: Environmental Analysis
-    env_data=analyze_environment(quantum_channel,classical_channel,alice,bob,100)
+    env_data=analyze_environment(quantum_channel,classical_channel,alice,bob,10)
     print(str(env_data))
     method, dimension, encoding_basis = select_encoding(env_data,supported_encoding_methods)
 
     logger.info(f"Selected encoding method: {method}  {dimension}D {encoding_basis}")
     
     # Phase 3: Quantum Data Transmission
-    alice.bases, qubits = prepare_qubits(args.key_length, method)
+    alice.bases,alice.bits, qubits = prepare_qubits(args.key_length, method)
 
     print(len(alice.bases))
 
@@ -68,13 +68,13 @@ def main(args=None):
     
     # Phase 4: Measurement and Data Acquisition
     # bob_bases = generate_random_bases(args.key_length)
-    bob_bases, measurements = measure_qubits(bob, method, transmitted_qubits)
+    bob_bases, bob_measurements = measure_qubits(bob, method, transmitted_qubits)
     print(len(bob_bases))
-    print(len(measurements))
+    # print(str(bob_measurements))
     print("Done")
     
     # Phase 5: Basis Reconciliation and Key Sifting
-    sifted_key, qber = reconcile_bases(classical_channel, alice_bases, bob_bases, measurements)
+    sifted_key, qber = reconcile_bases(classical_channel, alice, bob, bob_measurements,transmitted_qubits)
     logger.info(f"QBER: {qber:.4f}")
     
     # Phase 6: Error Correction
@@ -83,7 +83,9 @@ def main(args=None):
     # Phase 7: Privacy Amplification and Key Verification
     final_key = privacy_amplification(corrected_key, qber)
     key_verified = verify_key(classical_channel, final_key)
-    
+     
+    print(str(final_key))
+
     if key_verified:
         logger.info(f"AQKD protocol completed successfully. Key length: {len(final_key)} bits")
         return final_key

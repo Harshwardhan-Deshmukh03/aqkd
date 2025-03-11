@@ -171,6 +171,7 @@ def prepare_qubits(key_length, encoding_method):
     
     # Generate random bits and bases
     alice_bits = [random.randint(0, dimension-1) for _ in range(key_length)]
+    
     alice_bases = [random.randint(0, num_bases-1) for _ in range(key_length)]
     # print("Alice bases" + str(alice_bases))
     
@@ -191,10 +192,7 @@ def prepare_qubits(key_length, encoding_method):
         quantum_circuits.append(qc)
     
     logger.info(f"Successfully prepared {key_length} qubits with {encoding_method} encoding")
-    return alice_bases, quantum_circuits
-
-
-
+    return alice_bases,alice_bits, quantum_circuits
 
 def encode_qubit(qc, bit, basis_name, encoding_method):
     """
