@@ -119,7 +119,7 @@ def calculate_adaptive_compression_factor(qber, security_parameter=0.1):
     if qber == 0:
         h_qber = 0
     elif qber >= 0.5:
-        h_qber = 1  # Maximum entropy
+        h_qber = 0.9  # Maximum entropy
     else:
         h_qber = -qber * np.log2(qber) - (1-qber) * np.log2(1-qber)
     
@@ -142,7 +142,7 @@ def calculate_adaptive_compression_factor(qber, security_parameter=0.1):
     # Calculate the optimal compression factor
     # We need to compress enough to eliminate Eve's knowledge
     # But we want to retain as many bits as possible
-    compression_factor = max(0, (mutual_info - eve_info) / mutual_info)
+    compression_factor = max(0.1, (mutual_info - eve_info) / mutual_info)
     
     # Apply bounds to ensure reasonable compression
     original_factor = compression_factor

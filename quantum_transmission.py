@@ -310,7 +310,7 @@ def measure_e91_states(bell_pairs, alice_bases, bob_bases):
     return results
 
 
-def transmit_qubits(quantum_channel, qubits, alice, bob):
+def transmit_qubits(quantum_channel, qubits, alice, bob, mitm=False):
     """
     Transmit qubits from Alice to Bob via a quantum channel.
     
@@ -330,7 +330,7 @@ def transmit_qubits(quantum_channel, qubits, alice, bob):
     logger.info(f"Starting transmission of {len(qubits)} qubits from Alice to Bob...")
     
     # Apply channel effects to simulate real quantum transmission
-    received_qubits = quantum_channel.send(qubits)
+    received_qubits = quantum_channel.send(qubits, mitm)
     
     # Store the received qubits in Bob's received_qubits property
     bob.received_qubits = received_qubits

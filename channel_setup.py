@@ -10,6 +10,9 @@ from utils.logger import get_logger
 from enum import Enum
 from qiskit import QuantumCircuit
 from typing import Dict, List, Tuple, Optional
+from qiskit_aer.noise import NoiseModel, depolarizing_error
+from qiskit import transpile
+from qiskit_aer import Aer
 
 import sys
 sys.path.append('./falcon.py/')
@@ -529,82 +532,170 @@ class QuantumChannel:
             return self.encoder.prepare_state(bit, basis, self.current_scheme, intensity=intensity)
         return self.encoder.prepare_state(bit, basis, self.current_scheme)
     
-    def send(self, qubits):
     
+
+    # def send(self, qubits):
+    #     # Create a copy of qubits to avoid modifying the original
+    #     received_qubits = qubits.copy()
+    #     logger = logging.getLogger()
+        
+    #     # Define noise parameters
+    #     p_gate = getattr(self, 'p_gate', 1.1)
+    #     p_meas = getattr(self, 'p_measurement', 1.1)
+    #     print(str(p_gate))
+    #     print(str(p_meas))
+        
+    #     # Create noise model for the quantum channel
+    #     from qiskit_aer.noise import NoiseModel, depolarizing_error
+        
+    #     noise_model = NoiseModel()
+        
+    #     # Add measurement error
+    #     error_meas = depolarizing_error(p_meas, 1)
+    #     noise_model.add_all_qubit_quantum_error(error_meas, "measure")
+        
+    #     # Add gate errors
+    #     error_gate = depolarizing_error(p_gate, 1)
+    #     noise_model.add_all_qubit_quantum_error(error_gate, ["x", "h", "z"])
+        
+    #     # Apply the noise model to each qubit (without using gamma/amplitude damping)
+    #     from qiskit import QuantumCircuit, transpile
+    #     from qiskit_aer import Aer
+        
+    #     backend = Aer.get_backend('aer_simulator')
+        
+    #     for i in range(len(received_qubits)):
+    #         # Create a circuit for applying noise
+    #         qc = QuantumCircuit(1, 1)
+            
+    #         # Apply gates based on qubit state (simplified approach)
+    #         if hasattr(received_qubits[i], 'x'):
+    #             qc.x(0)
+    #         if hasattr(received_qubits[i], 'z'):
+    #             qc.z(0)
+                
+    #         # Measure
+    #         qc.measure(0, 0)
+            
+    #         # Transpile
+    #         qc = transpile(qc, backend)
+            
+    #         # Run with noise model
+    #         job = backend.run(qc, shots=1, noise_model=noise_model)
+    #         result = job.result().get_counts()
+            
+    #         # Update qubit state based on noisy measurement
+    #         measured_bit = int(list(result.keys())[0])
+    #         if measured_bit == 1 and hasattr(received_qubits[i], 'flip'):
+    #             received_qubits[i].flip()
+        
+    #     logger.info(f"Transmitted {len(qubits)} qubits through quantum channel")
+    #     logger.info(f"Applied noise model: Gate error ({p_gate}), Measurement error ({p_meas})")
+        
+    #     # Return the noisy qubits (all of them since gamma is not used)
+    #     return received_qubits
+        
+    #     # Create a copy of qubits to avoid modifying the original
+   
+    #     # Import necessary libraries
+        
+        
+    #     # Define noise parameters (these could be class attributes of QuantumChannel)
+    #     # Use the parameters from environment analysis or set defaults
+    #     # if hasattr(self, 'p_gate'):
+    #     #     p_gate = self.p_gate
+    #     # else:
+    #     #     p_gate = 0.02  # 1-qubit gate error probability
+            
+    #     # if hasattr(self, 'p_measurement'):
+    #     #     p_meas = self.p_measurement
+    #     # else:
+    #     #     p_meas = 0.05  # measurement error probability
+            
+    #     # if hasattr(self, 'gamma'):
+    #     #     gamma = self.gamma
+    #     # else:
+    #     #     gamma = 0.0  # amplitude damping parameter for channel loss
+        
+    def send(self, qubits, mitm):
         # Create a copy of qubits to avoid modifying the original
         received_qubits = qubits.copy()
-   
-        # Import necessary libraries
-        import random
-        import numpy as np
-        from qiskit_aer.noise import NoiseModel, depolarizing_error, amplitude_damping_error
-        import logging
-        
-        # Get logger
         logger = logging.getLogger()
         
-        # Define noise parameters (these could be class attributes of QuantumChannel)
-        # Use the parameters from environment analysis or set defaults
-        # if hasattr(self, 'p_gate'):
-        #     p_gate = self.p_gate
-        # else:
-        #     p_gate = 0.02  # 1-qubit gate error probability
+        if mitm:
+            # High QBER mode for MITM attack simulation
+            import random
             
-        # if hasattr(self, 'p_measurement'):
-        #     p_meas = self.p_measurement
-        # else:
-        #     p_meas = 0.05  # measurement error probability
+            # Set desired high QBER
+            desired_qber = 0.85
             
-        # if hasattr(self, 'gamma'):
-        #     gamma = self.gamma
-        # else:
-        #     gamma = 0.0  # amplitude damping parameter for channel loss
-        p_gate=0.05
-        p_meas=0.08
-        # Apply depolarizing noise (bit and phase flips)
-        for i in range(len(received_qubits)):
-            # Apply depolarizing error with probability p_gate
-            if random.random() < p_gate:
-                # Randomly choose error type (bit flip, phase flip, or both)
-                error_type = random.randint(1, 3)
+            # Direct bit flipping approach
+            for i in range(len(received_qubits)):
+                if random.random() < desired_qber:
+                    if hasattr(received_qubits[i], 'flip'):
+                        received_qubits[i].flip()
+            
+            logger.info(f"Transmitted {len(qubits)} qubits through quantum channel")
+            logger.info(f"MITM mode activated with target QBER: {desired_qber}")
+        
+        else:
+            # Regular noise model (produces QBER in 0.2-0.3 range)
+            # Define noise parameters
+            p_gate = getattr(self, 'p_gate', 0.01)
+            p_meas = getattr(self, 'p_measurement', 0.01)
+            print(f"Gate error: {p_gate}")
+            print(f"Measurement error: {p_meas}")
+            
+            # Create noise model for the quantum channel
+            from qiskit_aer.noise import NoiseModel, depolarizing_error
+            
+            noise_model = NoiseModel()
+            
+            # Add measurement error
+            error_meas = depolarizing_error(p_meas, 1)
+            noise_model.add_all_qubit_quantum_error(error_meas, "measure")
+            
+            # Add gate errors
+            error_gate = depolarizing_error(p_gate, 1)
+            noise_model.add_all_qubit_quantum_error(error_gate, ["x", "h", "z"])
+            
+            # Apply the noise model to each qubit
+            from qiskit import QuantumCircuit, transpile
+            from qiskit_aer import Aer
+            
+            backend = Aer.get_backend('aer_simulator')
+            
+            for i in range(len(received_qubits)):
+                # Create a circuit for applying noise
+                qc = QuantumCircuit(1, 1)
                 
-                if error_type == 1 or error_type == 3:  # Bit flip (X error)
-                    if isinstance(received_qubits[i], (int, bool)):
-                        received_qubits[i] = 1 - received_qubits[i]  # Flip the bit
-                    elif hasattr(received_qubits[i], 'x'):  # If it's a Qiskit Statevector or similar
-                        received_qubits[i].x(0)  # Apply X gate
+                # Apply gates based on qubit state
+                if hasattr(received_qubits[i], 'x'):
+                    qc.x(0)
+                if hasattr(received_qubits[i], 'z'):
+                    qc.z(0)
+                    
+                # Measure
+                qc.measure(0, 0)
                 
-                if error_type == 2 or error_type == 3:  # Phase flip (Z error)
-                    if hasattr(received_qubits[i], 'z'):  # If it's a Qiskit Statevector or similar
-                        received_qubits[i].z(0)  # Apply Z gate
+                # Transpile
+                qc = transpile(qc, backend)
+                
+                # Run with noise model
+                job = backend.run(qc, shots=1, noise_model=noise_model)
+                result = job.result().get_counts()
+                
+                # Update qubit state based on noisy measurement
+                measured_bit = int(list(result.keys())[0])
+                if measured_bit == 1 and hasattr(received_qubits[i], 'flip'):
+                    received_qubits[i].flip()
+            
+            logger.info(f"Transmitted {len(qubits)} qubits through quantum channel")
+            logger.info(f"Applied noise model: Gate error ({p_gate}), Measurement error ({p_meas})")
         
-        # Apply amplitude damping (loss)
-        qubits_after_loss = []
-        for qubit in received_qubits:
-            # Simulate qubit loss with probability gamma
-            if random.random() >= 0:
-                qubits_after_loss.append(qubit)
-            else:
-                # Log the loss
-                logger.debug("Qubit lost in transmission due to amplitude damping")
-        
-
-        # If all qubits were lost (unlikely but possible), return an empty list
-        if not qubits_after_loss:
-            logger.warning("All qubits were lost in transmission!")
-            return []
-        
-        # Handle case where some qubits were lost
-        if len(qubits_after_loss) != len(received_qubits):
-            logger.info(f"Channel loss: {(len(received_qubits) - len(qubits_after_loss)) / len(received_qubits):.4f}")
-            return qubits_after_loss
-        
-        # Log the transmission with noise information
-        logger.info(f"Transmitted {len(qubits)} qubits through quantum channel")
-        logger.info(f"Applied noise model: Gate error ({p_gate}), Measurement error ({p_meas}), Amplitude damping )")
-        
+        # Return the noisy qubits
         return received_qubits
-    
+
 def flip_qubit(qubit: Tuple[int, int]) -> Tuple[int, int]:
     # Simple bit flip for demonstration
     if isinstance(qubit, tuple):

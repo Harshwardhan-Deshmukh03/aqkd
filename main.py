@@ -17,6 +17,8 @@ def parse_arguments(args=None):
     parser.add_argument('--key-length', type=int, default=1024, help='Length of the quantum key')
     parser.add_argument('--decoy-states', action='store_true', help='Use decoy states')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
+    parser.add_argument('--mitm', action='store_true', help='Simulate a man-in-the-middle attack with higher QBER')
+    
     return parser.parse_args(args)
 
 def match_encoding_methods(list1, list2):
@@ -63,7 +65,7 @@ def main(args=None):
         print(len(decoy_pos))
 
 
-    transmitted_qubits =  transmit_qubits(quantum_channel, qubits, alice, bob)
+    transmitted_qubits =  transmit_qubits(quantum_channel, qubits, alice, bob, args.mitm)
 
     # print(str(transmitted_qubits[0]))
     
@@ -75,6 +77,8 @@ def main(args=None):
     print("Done")
     sifted_key, qber = reconcile_bases(classical_channel, alice, bob, bob_measurements,transmitted_qubits)
     logger.info(f"QBER: {qber:.4f}")
+    print(json.dumps({"qber": qber}))
+
     
 
 
@@ -149,7 +153,7 @@ def main(args=None):
 
     if key_verified:
         logger.info(f"AQKD protocol completed successfully. Key length: {len(bob_final_key)} bits")
-        return bob_final_key
+        return qber
     else:
         logger.error("Key verification failed!")
         return None
