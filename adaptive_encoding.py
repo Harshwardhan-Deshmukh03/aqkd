@@ -40,36 +40,6 @@ class SimpleANN:
         else:
             return 16, "Custom"
 
-# def analyze_environment(quantum_channel, sample_size=100):
-#     logger.info("Analyzing environment and channel conditions...")
-    
-#     # Generate and send test qubits
-#     test_qubits = [(random.randint(0, 1), random.randint(0, 2)) for _ in range(sample_size)]
-#     received_qubits = quantum_channel.transmit(test_qubits)
-    
-#     # Calculate environment parameters
-#     loss_count = received_qubits.count(None)
-#     channel_loss = loss_count / sample_size
-    
-#     # Count errors in non-lost qubits
-#     error_count = sum(1 for i, qubit in enumerate(received_qubits) 
-#                      if qubit is not None and qubit[0] != test_qubits[i][0])
-#     valid_qubits = sample_size - loss_count
-#     qber = error_count / valid_qubits if valid_qubits > 0 else 0
-    
-#     # Estimate noise levels
-#     noise_levels = qber * 2  # Simplified model
-    
-#     env_data = {
-#         "QBER": qber,
-#         "channel_loss": channel_loss,
-#         "noise_levels": noise_levels
-#     }
-    
-#     logger.info(f"Environment analysis - QBER: {qber:.4f}, Loss: {channel_loss:.4f}, Noise: {noise_levels:.4f}")
-#     return env_data
-
-
         
 
 import logging

@@ -45,7 +45,7 @@ def main(args=None):
     ### 
 
     # Phase 2: Environmental Analysis
-    env_data=analyze_environment(quantum_channel,classical_channel,alice,bob,10)
+    env_data=analyze_environment(quantum_channel,classical_channel,alice,bob,128)
     print(str(env_data))
     method, dimension, encoding_basis = select_encoding(env_data,supported_encoding_methods)
 

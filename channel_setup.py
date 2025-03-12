@@ -533,7 +533,7 @@ class QuantumChannel:
     
         # Create a copy of qubits to avoid modifying the original
         received_qubits = qubits.copy()
-        
+   
         # Import necessary libraries
         import random
         import numpy as np
@@ -545,21 +545,22 @@ class QuantumChannel:
         
         # Define noise parameters (these could be class attributes of QuantumChannel)
         # Use the parameters from environment analysis or set defaults
-        if hasattr(self, 'p_gate'):
-            p_gate = self.p_gate
-        else:
-            p_gate = 0.02  # 1-qubit gate error probability
+        # if hasattr(self, 'p_gate'):
+        #     p_gate = self.p_gate
+        # else:
+        #     p_gate = 0.02  # 1-qubit gate error probability
             
-        if hasattr(self, 'p_measurement'):
-            p_meas = self.p_measurement
-        else:
-            p_meas = 0.05  # measurement error probability
+        # if hasattr(self, 'p_measurement'):
+        #     p_meas = self.p_measurement
+        # else:
+        #     p_meas = 0.05  # measurement error probability
             
-        if hasattr(self, 'gamma'):
-            gamma = self.gamma
-        else:
-            gamma = 0.0  # amplitude damping parameter for channel loss
-        
+        # if hasattr(self, 'gamma'):
+        #     gamma = self.gamma
+        # else:
+        #     gamma = 0.0  # amplitude damping parameter for channel loss
+        p_gate=0.05
+        p_meas=0.08
         # Apply depolarizing noise (bit and phase flips)
         for i in range(len(received_qubits)):
             # Apply depolarizing error with probability p_gate
@@ -581,12 +582,13 @@ class QuantumChannel:
         qubits_after_loss = []
         for qubit in received_qubits:
             # Simulate qubit loss with probability gamma
-            if random.random() >= gamma:
+            if random.random() >= 0:
                 qubits_after_loss.append(qubit)
             else:
                 # Log the loss
                 logger.debug("Qubit lost in transmission due to amplitude damping")
         
+
         # If all qubits were lost (unlikely but possible), return an empty list
         if not qubits_after_loss:
             logger.warning("All qubits were lost in transmission!")
@@ -599,7 +601,7 @@ class QuantumChannel:
         
         # Log the transmission with noise information
         logger.info(f"Transmitted {len(qubits)} qubits through quantum channel")
-        logger.info(f"Applied noise model: Gate error ({p_gate}), Measurement error ({p_meas}), Amplitude damping ({gamma})")
+        logger.info(f"Applied noise model: Gate error ({p_gate}), Measurement error ({p_meas}), Amplitude damping )")
         
         return received_qubits
     
