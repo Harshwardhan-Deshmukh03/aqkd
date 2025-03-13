@@ -54,38 +54,28 @@ def quantum_circuit(inputs, weights):
 class QNN(nn.Module):
     def __init__(self):
         super(QNN, self).__init__()
-        # 3 layers with 4 qubits each
         self.quantum_weights = nn.Parameter(torch.randn(3, n_qubits))
-        # Linear layer to map 4 quantum outputs to 6 final outputs (changed from 5)
         self.post_processing = nn.Linear(n_qubits, 6)
-        # Softmax to ensure output is a probability distribution
         self.softmax = nn.Softmax(dim=1)
         
     def forward(self, x):
-        # Apply quantum circuit to each input sample
         q_out = torch.zeros(x.shape[0], n_qubits)
         for i, features in enumerate(x):
             q_out[i] = torch.tensor(quantum_circuit(features, self.quantum_weights))
         
-        # Post-processing with classical layer
         out = self.post_processing(q_out)
-        # Apply softmax to get probabilities
         return self.softmax(out)
 
 # Function to load and preprocess data
 def load_and_preprocess_data(file_path):
-    # Load data from CSV
     data = pd.read_csv(file_path)
     
-    # Check if we have exactly 4 input features
-    if len(data.columns) < 5:  # At least 4 features + 1 target
+    if len(data.columns) < 5:  
         raise ValueError("CSV file should have at least 5 columns: 4 input features and 1 target")
     
-    # Assuming the first 4 columns are features and the rest is for target encoding
     X = data.iloc[:, :4].values
     y = data.iloc[:, 4:].values
     
-    # If y has only one column, assume it's a class index and convert to one-hot
     if y.shape[1] == 1:
         y_encoded = np.zeros((y.shape[0], 6))  # Changed from 5 to 6 classes
         for i, val in enumerate(y.flatten()):

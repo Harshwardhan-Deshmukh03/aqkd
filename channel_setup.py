@@ -623,20 +623,76 @@ class QuantumChannel:
         logger = logging.getLogger()
         
         if mitm:
-            # High QBER mode for MITM attack simulation
-            import random
+            # # High QBER mode for MITM attack simulation
+            # import random
             
-            # Set desired high QBER
-            desired_qber = 0.85
+            # # Set desired high QBER
+            # desired_qber = 0.85
             
-            # Direct bit flipping approach
+            # # Direct bit flipping approach
+            # for i in range(len(received_qubits)):
+            #     if random.random() < desired_qber:
+            #         if hasattr(received_qubits[i], 'flip'):
+            #             received_qubits[i].flip()
+            
+            # logger.info(f"Transmitted {len(qubits)} qubits through quantum channel")
+            # logger.info(f"MITM mode activated with target QBER: {desired_qber}")
+
+            
+            # Regular noise model (produces QBER in 0.2-0.3 range)
+            # Define noise parameters
+            p_gate = getattr(self, 'p_gate', 0.4)
+            p_meas = getattr(self, 'p_measurement', 0.4)
+            print(f"Gate error: {p_gate}")
+            print(f"Measurement error: {p_meas}")
+            
+            # Create noise model for the quantum channel
+            from qiskit_aer.noise import NoiseModel, depolarizing_error
+            
+            noise_model = NoiseModel()
+            
+            # Add measurement error
+            error_meas = depolarizing_error(p_meas, 1)
+            noise_model.add_all_qubit_quantum_error(error_meas, "measure")
+            
+            # Add gate errors
+            error_gate = depolarizing_error(p_gate, 1)
+            noise_model.add_all_qubit_quantum_error(error_gate, ["x", "h", "z"])
+            
+            # Apply the noise model to each qubit
+            from qiskit import QuantumCircuit, transpile
+            from qiskit_aer import Aer
+            
+            backend = Aer.get_backend('aer_simulator')
+            
             for i in range(len(received_qubits)):
-                if random.random() < desired_qber:
-                    if hasattr(received_qubits[i], 'flip'):
-                        received_qubits[i].flip()
+                # Create a circuit for applying noise
+                qc = QuantumCircuit(1, 1)
+                
+                # Apply gates based on qubit state
+                if hasattr(received_qubits[i], 'x'):
+                    qc.x(0)
+                if hasattr(received_qubits[i], 'z'):
+                    qc.z(0)
+                    
+                # Measure
+                qc.measure(0, 0)
+                
+                # Transpile
+                qc = transpile(qc, backend)
+                
+                # Run with noise model
+                job = backend.run(qc, shots=1, noise_model=noise_model)
+                result = job.result().get_counts()
+                
+                # Update qubit state based on noisy measurement
+                measured_bit = int(list(result.keys())[0])
+                if measured_bit == 1 and hasattr(received_qubits[i], 'flip'):
+                    received_qubits[i].flip()
             
             logger.info(f"Transmitted {len(qubits)} qubits through quantum channel")
-            logger.info(f"MITM mode activated with target QBER: {desired_qber}")
+            logger.info(f"Applied noise model: Gate error ({p_gate}), Measurement error ({p_meas})")
+
         
         else:
             # Regular noise model (produces QBER in 0.2-0.3 range)

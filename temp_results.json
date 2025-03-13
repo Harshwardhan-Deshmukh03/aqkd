@@ -1,0 +1,25 @@
+{
+  "key_length": 1024,
+  "decoy_states": false,
+  "mitm": false,
+  "encoding_method": "SIX_STATE",
+  "encoding_dimension": 2,
+  "encoding_basis": "['computational', 'hadamard', 'circular']",
+  "sifted_key_length": 332,
+  "qber": 0.3373493975903614,
+  "corrected_key_length": 332,
+  "final_key_length": 33,
+  "verification_success": "Success",
+  "phase_times": {
+    "setup": 4.725674390792847,
+    "env_analysis": 21.57753849029541,
+    "transmission": 127.58581376075745,
+    "measurement": 91.20543384552002,
+    "error_correction": 0.06917381286621094,
+    "privacy_amplification": 0.5777688026428223,
+    "verification": 0.19057750701904297
+  },
+  "total_time": 245.95293951034546,
+  "noise_level": "N/A",
+  "coherence_time": "N/A"
+}

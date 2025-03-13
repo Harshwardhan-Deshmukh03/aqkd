@@ -354,8 +354,8 @@ def analyze_environment(quantum_channel, classical_channel, alice, bob, sample_s
     noise_model = NoiseModel()
     
     # Configure noise parameters
-    p_meas = 0.5  # measurement error probability
-    p_gate1 = 0.5  # 1-qubit gate error probability
+    p_meas = 0.2  # measurement error probability
+    p_gate1 = 0.2  # 1-qubit gate error probability
     gamma = 0.07    # amplitude damping parameter (for channel loss)
     
     # Add measurement error
