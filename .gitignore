@@ -117,3 +117,6 @@ dmypy.json
 venv/
 ENV/
 env/
+myenv/
+temp_results.json
+./falcon.py/
