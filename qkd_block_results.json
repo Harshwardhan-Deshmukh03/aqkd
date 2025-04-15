@@ -1,0 +1,449 @@
+[
+  {
+    "timestamp": "2025-04-13 21:36:24",
+    "key_length": 512,
+    "block_size": 64,
+    "mitm": true,
+    "decoy_states": true,
+    "error": "Command '['python', 'main.py', '--key-length', '512', '--block-size', '64', '--test-size', '32', '--decoy-states', '--mitm']' returned non-zero exit status 1.",
+    "execution_time": 0.04163837432861328
+  },
+  {
+    "timestamp": "2025-04-13 21:36:24",
+    "key_length": 1024,
+    "block_size": 128,
+    "mitm": true,
+    "decoy_states": true,
+    "error": "Command '['python', 'main.py', '--key-length', '1024', '--block-size', '128', '--test-size', '32', '--decoy-states', '--mitm']' returned non-zero exit status 1.",
+    "execution_time": 0.01867079734802246
+  },
+  {
+    "try": 1,
+    "timestamp": "2025-04-13 21:41:24",
+    "key_length": 512,
+    "block_size": 64,
+    "mitm": true,
+    "decoy_states": true,
+    "qber": 0.34866168644951534,
+    "execution_time": 65.35634016990662,
+    "test_size": 32,
+    "encoding_method": "SIX_STATE",
+    "encoding_dimension": 2,
+    "encoding_basis": "['computational', 'hadamard', 'circular']",
+    "block_0_decoy_count": 6,
+    "block_1_decoy_count": 4,
+    "block_2_decoy_count": 4,
+    "block_3_decoy_count": 7,
+    "block_4_decoy_count": 9,
+    "block_5_decoy_count": 3,
+    "block_6_decoy_count": 4,
+    "block_7_decoy_count": 10,
+    "sifted_key_length": 247,
+    "avg_qber": 0.34866168644951534,
+    "corrected_key_length": 247,
+    "final_key_length": 24,
+    "verification_success": "Success",
+    "phase_times": {
+      "setup": 2.0698468685150146,
+      "env_analysis": 9.38328766822815,
+      "transmission_measurement": 53.879865646362305,
+      "error_correction": 0.0013794898986816406,
+      "privacy_amplification": 0.0005917549133300781,
+      "verification": 0.00011491775512695312
+    },
+    "total_time": 65.35605669021606,
+    "noise_level": "N/A",
+    "coherence_time": "N/A"
+  },
+  {
+    "try": 1,
+    "timestamp": "2025-04-13 21:43:06",
+    "key_length": 1024,
+    "block_size": 128,
+    "mitm": true,
+    "decoy_states": true,
+    "qber": 0.3126430963376528,
+    "execution_time": 102.34294748306274,
+    "test_size": 32,
+    "encoding_method": "EIGHT_STATE",
+    "encoding_dimension": 2,
+    "encoding_basis": "['computational', 'hadamard', 'circular', 'custom']",
+    "block_0_decoy_count": 10,
+    "block_1_decoy_count": 11,
+    "block_2_decoy_count": 16,
+    "block_3_decoy_count": 10,
+    "block_4_decoy_count": 12,
+    "block_5_decoy_count": 7,
+    "block_6_decoy_count": 11,
+    "block_7_decoy_count": 16,
+    "sifted_key_length": 383,
+    "avg_qber": 0.3126430963376528,
+    "corrected_key_length": 383,
+    "final_key_length": 38,
+    "verification_success": "Success",
+    "phase_times": {
+      "setup": 2.179593086242676,
+      "env_analysis": 1.6184000968933105,
+      "transmission_measurement": 98.51368737220764,
+      "error_correction": 0.0021719932556152344,
+      "privacy_amplification": 0.0006289482116699219,
+      "verification": 0.00011658668518066406
+    },
+    "total_time": 102.34263682365417,
+    "noise_level": "N/A",
+    "coherence_time": "N/A"
+  },
+  {
+    "try": 1,
+    "timestamp": "2025-04-13 21:54:38",
+    "key_length": 512,
+    "block_size": 64,
+    "mitm": true,
+    "decoy_states": true,
+    "qber": 0.41737891737891736,
+    "execution_time": 17.864445686340332,
+    "test_size": 32,
+    "encoding_method": "BB84",
+    "encoding_dimension": 2,
+    "encoding_basis": "['computational', 'hadamard']",
+    "block_0_decoy_count": 10,
+    "block_1_decoy_count": 3,
+    "block_logs": [
+      {
+        "block_number": 1,
+        "qber": 0.2962962962962963,
+        "encoding_method": "BB84 (2D, ['computational', 'hadamard'])",
+        "action": "Retransmit"
+      },
+      {
+        "block_number": 2,
+        "qber": 0.5384615384615384,
+        "encoding_method": "N/A",
+        "action": "Abort"
+      }
+    ],
+    "sifted_key_length": 40,
+    "avg_qber": 0.41737891737891736,
+    "corrected_key_length": 40,
+    "final_key_length": 4,
+    "verification_success": "Success",
+    "phase_times": {
+      "setup": 2.067164659500122,
+      "env_analysis": 3.1630845069885254,
+      "transmission_measurement": 12.60239577293396,
+      "error_correction": 0.0004343986511230469,
+      "privacy_amplification": 0.0006225109100341797,
+      "verification": 0.00011420249938964844
+    },
+    "total_time": 17.8641574382782,
+    "noise_level": "N/A",
+    "coherence_time": "N/A"
+  },
+  {
+    "try": 1,
+    "timestamp": "2025-04-13 21:55:07",
+    "key_length": 1024,
+    "block_size": 128,
+    "mitm": true,
+    "decoy_states": true,
+    "qber": 0.3007389162561577,
+    "execution_time": 28.93180274963379,
+    "test_size": 32,
+    "encoding_method": "BB84",
+    "encoding_dimension": 2,
+    "encoding_basis": "['computational', 'hadamard']",
+    "block_0_decoy_count": 8,
+    "block_1_decoy_count": 8,
+    "block_logs": [
+      {
+        "block_number": 1,
+        "qber": 0.25862068965517243,
+        "encoding_method": "BB84 (2D, ['computational', 'hadamard'])",
+        "action": "Retransmit"
+      },
+      {
+        "block_number": 2,
+        "qber": 0.34285714285714286,
+        "encoding_method": "N/A",
+        "action": "Abort"
+      }
+    ],
+    "sifted_key_length": 93,
+    "avg_qber": 0.3007389162561577,
+    "corrected_key_length": 93,
+    "final_key_length": 9,
+    "verification_success": "Success",
+    "phase_times": {
+      "setup": 3.37522554397583,
+      "env_analysis": 1.6657874584197998,
+      "transmission_measurement": 23.86035418510437,
+      "error_correction": 0.0006868839263916016,
+      "privacy_amplification": 0.0005548000335693359,
+      "verification": 0.00011420249938964844
+    },
+    "total_time": 28.931498765945435,
+    "noise_level": "N/A",
+    "coherence_time": "N/A"
+  },
+  {
+    "try": 1,
+    "timestamp": "2025-04-13 21:59:45",
+    "key_length": 512,
+    "block_size": 64,
+    "mitm": true,
+    "decoy_states": true,
+    "qber": 0.282851817334576,
+    "execution_time": 17.333563566207886,
+    "test_size": 32,
+    "encoding_method": "BB84",
+    "encoding_dimension": 2,
+    "encoding_basis": "['computational', 'hadamard']",
+    "block_0_decoy_count": 6,
+    "block_1_decoy_count": 5,
+    "block_logs": [
+      {
+        "block_number": 1,
+        "qber": 0.2413793103448276,
+        "encoding_method": "BB84 (2D, ['computational', 'hadamard'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 2,
+        "qber": 0.32432432432432434,
+        "encoding_method": "N/A",
+        "action": "Abort"
+      }
+    ],
+    "sifted_key_length": 66,
+    "avg_qber": 0.282851817334576,
+    "corrected_key_length": 66,
+    "final_key_length": 6,
+    "verification_success": "Success",
+    "phase_times": {
+      "setup": 2.1665854454040527,
+      "env_analysis": 3.060051918029785,
+      "transmission_measurement": 12.091677188873291,
+      "error_correction": 0.0005941390991210938,
+      "privacy_amplification": 0.0005311965942382812,
+      "verification": 0.00010514259338378906
+    },
+    "total_time": 17.3332839012146,
+    "noise_level": "N/A",
+    "coherence_time": "N/A"
+  },
+  {
+    "try": 1,
+    "timestamp": "2025-04-13 21:59:58",
+    "key_length": 1024,
+    "block_size": 128,
+    "mitm": true,
+    "decoy_states": true,
+    "qber": 0.3448275862068966,
+    "execution_time": 13.576250791549683,
+    "test_size": 32,
+    "encoding_method": "BB84",
+    "encoding_dimension": 2,
+    "encoding_basis": "['computational', 'hadamard']",
+    "block_0_decoy_count": 13,
+    "block_logs": [
+      {
+        "block_number": 1,
+        "qber": 0.3448275862068966,
+        "encoding_method": "N/A",
+        "action": "Abort"
+      }
+    ],
+    "sifted_key_length": 58,
+    "avg_qber": 0.3448275862068966,
+    "corrected_key_length": 58,
+    "final_key_length": 5,
+    "verification_success": "Success",
+    "phase_times": {
+      "setup": 1.3342595100402832,
+      "env_analysis": 1.4799447059631348,
+      "transmission_measurement": 10.660310983657837,
+      "error_correction": 0.00047206878662109375,
+      "privacy_amplification": 0.0005371570587158203,
+      "verification": 0.00010895729064941406
+    },
+    "total_time": 13.575927972793579,
+    "noise_level": "N/A",
+    "coherence_time": "N/A"
+  },
+  {
+    "try": 1,
+    "timestamp": "2025-04-13 22:06:45",
+    "key_length": 512,
+    "block_size": 64,
+    "mitm": true,
+    "decoy_states": true,
+    "qber": 0.38494887542863554,
+    "execution_time": 62.49237680435181,
+    "test_size": 32,
+    "encoding_method": "E91",
+    "encoding_dimension": 2,
+    "encoding_basis": "['bell_basis']",
+    "block_0_decoy_count": 6,
+    "block_1_decoy_count": 4,
+    "block_2_decoy_count": 5,
+    "block_3_decoy_count": 6,
+    "block_4_decoy_count": 8,
+    "block_5_decoy_count": 12,
+    "block_6_decoy_count": 7,
+    "block_7_decoy_count": 7,
+    "block_logs": [
+      {
+        "block_number": 1,
+        "qber": 0.5,
+        "encoding_method": "E91 (2D, ['bell_basis'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 2,
+        "qber": 0.15384615384615385,
+        "encoding_method": "BB84 (2D, ['computational', 'hadamard'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 3,
+        "qber": 0.6551724137931034,
+        "encoding_method": "BB84 (2D, ['computational', 'hadamard'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 4,
+        "qber": 0.4,
+        "encoding_method": "EIGHT_STATE (2D, ['computational', 'hadamard', 'circular', 'custom'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 5,
+        "qber": 0.21428571428571427,
+        "encoding_method": "BB84 (2D, ['computational', 'hadamard'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 6,
+        "qber": 0.5217391304347826,
+        "encoding_method": "EIGHT_STATE (2D, ['computational', 'hadamard', 'circular', 'custom'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 7,
+        "qber": 0.24324324324324326,
+        "encoding_method": "BB84 (2D, ['computational', 'hadamard'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 8,
+        "qber": 0.391304347826087,
+        "encoding_method": "SIX_STATE (2D, ['computational', 'hadamard', 'circular'])",
+        "action": "Continue"
+      }
+    ],
+    "sifted_key_length": 250,
+    "avg_qber": 0.38494887542863554,
+    "corrected_key_length": 250,
+    "final_key_length": 25,
+    "verification_success": "Success",
+    "phase_times": {
+      "setup": 4.078457355499268,
+      "env_analysis": 3.1796226501464844,
+      "transmission_measurement": 55.21813702583313,
+      "error_correction": 0.0013937950134277344,
+      "privacy_amplification": 0.0005517005920410156,
+      "verification": 0.00010585784912109375
+    },
+    "total_time": 62.49204874038696,
+    "noise_level": "N/A",
+    "coherence_time": "N/A"
+  },
+  {
+    "try": 1,
+    "timestamp": "2025-04-13 22:08:27",
+    "key_length": 1024,
+    "block_size": 128,
+    "mitm": true,
+    "decoy_states": true,
+    "qber": 0.3156216800955771,
+    "execution_time": 101.47145438194275,
+    "test_size": 32,
+    "encoding_method": "EIGHT_STATE",
+    "encoding_dimension": 2,
+    "encoding_basis": "['computational', 'hadamard', 'circular', 'custom']",
+    "block_0_decoy_count": 13,
+    "block_1_decoy_count": 10,
+    "block_2_decoy_count": 10,
+    "block_3_decoy_count": 19,
+    "block_4_decoy_count": 14,
+    "block_5_decoy_count": 10,
+    "block_6_decoy_count": 13,
+    "block_7_decoy_count": 13,
+    "block_logs": [
+      {
+        "block_number": 1,
+        "qber": 0.3333333333333333,
+        "encoding_method": "EIGHT_STATE (2D, ['computational', 'hadamard', 'circular', 'custom'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 2,
+        "qber": 0.34375,
+        "encoding_method": "EIGHT_STATE (2D, ['computational', 'hadamard', 'circular', 'custom'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 3,
+        "qber": 0.1896551724137931,
+        "encoding_method": "BB84 (2D, ['computational', 'hadamard'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 4,
+        "qber": 0.35294117647058826,
+        "encoding_method": "BB84 (2D, ['computational', 'hadamard'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 5,
+        "qber": 0.358974358974359,
+        "encoding_method": "SIX_STATE (2D, ['computational', 'hadamard', 'circular'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 6,
+        "qber": 0.2727272727272727,
+        "encoding_method": "SIX_STATE (2D, ['computational', 'hadamard', 'circular'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 7,
+        "qber": 0.41935483870967744,
+        "encoding_method": "EIGHT_STATE (2D, ['computational', 'hadamard', 'circular', 'custom'])",
+        "action": "Continue"
+      },
+      {
+        "block_number": 8,
+        "qber": 0.2542372881355932,
+        "encoding_method": "BB84 (2D, ['computational', 'hadamard'])",
+        "action": "Continue"
+      }
+    ],
+    "sifted_key_length": 316,
+    "avg_qber": 0.3156216800955771,
+    "corrected_key_length": 316,
+    "final_key_length": 31,
+    "verification_success": "Success",
+    "phase_times": {
+      "setup": 2.2725741863250732,
+      "env_analysis": 1.5244855880737305,
+      "transmission_measurement": 97.64257645606995,
+      "error_correction": 0.001790761947631836,
+      "privacy_amplification": 0.0005960464477539062,
+      "verification": 0.00011420249938964844
+    },
+    "total_time": 101.47109079360962,
+    "noise_level": "N/A",
+    "coherence_time": "N/A"
+  }
+]
